@@ -1,16 +1,95 @@
-# React + Vite
+# Flowgentra AI Documentation
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Flowgentra AI
 
-Currently, two official plugins are available:
+This is the **official documentation website** for **Flowgentra AI**, a Rust library for building AI agent workflows with graph-based execution. This documentation covers installation, usage, API reference, examples, and guides for building AI agents with Flowgentra.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Tech Stack
 
-## React Compiler
+- **Framework**: [Vite](https://vitejs.dev/) + [React](https://reactjs.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Routing**: [React Router](https://reactrouter.com/)
+- **Syntax Highlighting**: [Shiki](https://shiki.matsu.io/)
+- **Build Tool**: Vite with SWC for fast development and optimized production builds
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech Stack
 
-## Expanding the ESLint configuration
+- **Framework**: [Vite](https://vitejs.dev/) + [React](https://reactjs.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Routing**: [React Router](https://reactrouter.com/)
+- **Syntax Highlighting**: [Shiki](https://shiki.matsu.io/)
+- **Build Tool**: Vite with SWC for fast development and optimized production builds
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+ and npm
+
+### Installation
+
+```bash
+npm install
+```
+
+### Development
+
+Start the development server with hot reload:
+
+```bash
+npm run dev
+```
+
+The documentation website will be available at `http://localhost:5173`.
+
+### Build for Production
+
+```bash
+npm run build
+```
+
+### Preview Production Build
+
+```bash
+npm run preview
+```
+
+### Linting
+
+```bash
+npm run lint
+```
+
+## Project Structure
+
+```
+flowgentra-docs/
+├── public/                 # Static assets
+├── src/
+│   ├── assets/            # Images, icons, etc.
+│   ├── components/        # Reusable React components
+│   ├── context/           # React context providers
+│   ├── data/              # Documentation data and configuration
+│   ├── pages/             # Page components
+│   ├── App.jsx            # Main app component
+│   ├── index.css          # Global styles
+│   └── main.jsx           # App entry point
+├── eslint.config.js       # ESLint configuration
+├── package.json           # Dependencies and scripts
+├── vite.config.js         # Vite configuration
+└── README.md             # This file
+```
+
+## Contributing
+
+This documentation website is part of the Flowgentra AI project. To contribute:
+
+1. Make changes to the documentation content or website components
+2. Test locally with `npm run dev`
+3. Ensure the build passes with `npm run build`
+4. Submit a pull request
+
+## Related Projects
+
+- [flowgentra-ai-py](https://github.com/oussamabenhariz/flowgentra-ai-py) - Python bindings and documentation
+- [flowgentra-ai-rs](https://github.com/oussamabenhariz/flowgentra-ai-rs) - Core Rust library
