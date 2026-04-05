@@ -11,7 +11,7 @@ import Changelog from './pages/Changelog'
 export default function App() {
   return (
     <LanguageProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/flowgentra-ai-docs">
         <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
           <Navbar />
           <div style={{ flex: 1 }}>
