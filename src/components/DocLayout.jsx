@@ -7,6 +7,30 @@ const sidebarLinks = [
     links: [
       { to: '/docs/getting-started', label: 'Getting Started' },
       { to: '/docs/installation',    label: 'Installation' },
+      { to: '/docs/what-is-flowgentra', label: 'What is Flowgentra?' },
+    ],
+  },
+  {
+    group: 'Core Concepts',
+    links: [
+      { to: '/docs/concepts/graphs', label: 'Graphs' },
+      { to: '/docs/concepts/nodes', label: 'Nodes' },
+      { to: '/docs/concepts/state', label: 'State' },
+    ],
+  },
+  {
+    group: 'Guides',
+    links: [
+      { to: '/docs/guides/agents', label: 'Building Agents' },
+      { to: '/docs/guides/graphs', label: 'Working with Graphs' },
+      { to: '/docs/guides/human-in-the-loop', label: 'Human-in-the-Loop' },
+      { to: '/docs/guides/llm-client', label: 'LLM Integration' },
+      { to: '/docs/guides/memory', label: 'Memory & Persistence' },
+      { to: '/docs/guides/observability', label: 'Observability' },
+      { to: '/docs/guides/rag', label: 'RAG Systems' },
+      { to: '/docs/guides/state', label: 'State Management' },
+      { to: '/docs/guides/supervisor', label: 'Multi-Agent Systems' },
+      { to: '/docs/guides/tools', label: 'Tool Integration' },
     ],
   },
   {
@@ -27,6 +51,8 @@ const sidebarLinks = [
     group: 'More',
     links: [
       { to: '/docs/examples',  label: 'Examples' },
+      { to: '/docs/best-practices', label: 'Best Practices' },
+      { to: '/docs/faq', label: 'FAQ' },
       { to: '/docs/changelog', label: 'Changelog' },
     ],
   },
