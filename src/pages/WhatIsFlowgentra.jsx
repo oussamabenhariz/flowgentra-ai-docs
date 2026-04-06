@@ -172,12 +172,29 @@ graph = builder.compile()`}
         </div>
       </Section>
 
-      <Section id="two-patterns" title="The Two Patterns">
+      <Section id="two-patterns" title="The Three Patterns">
         <p style={{ color: '#8b949e', marginBottom: 16 }}>
-          There are two ways to use Flowgentra. Both use the same engine.
+          There are three ways to use Flowgentra. All use the same engine.
         </p>
 
-        <h3 style={{ color: '#e6edf3', fontSize: '1.25rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>1. Code-first (direct API)</h3>
+        <h3 style={{ color: '#e6edf3', fontSize: '1.25rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>1. Predefined Agents</h3>
+        <p style={{ color: '#8b949e', marginBottom: 16 }}>
+          Use built-in agent templates for common patterns. Best for getting started quickly.
+        </p>
+        <CodeBlock
+          python={`from flowgentra_ai.agent import Agent
+
+# Create a conversational agent
+agent = Agent.create(
+    agent_type="conversational",
+    model="claude-opus-4-6",
+    memory_steps=10
+)
+
+result = agent.run_with_input("Hello!")`}
+        />
+
+        <h3 style={{ color: '#e6edf3', fontSize: '1.25rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>2. Code-first (direct API)</h3>
         <p style={{ color: '#8b949e', marginBottom: 16 }}>
           Build the graph programmatically. Best for complex logic with non-trivial routing.
         </p>
@@ -191,7 +208,7 @@ builder.add_edge("step_b", END)
 graph = builder.compile()`}
         />
 
-        <h3 style={{ color: '#e6edf3', fontSize: '1.25rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>2. Config-driven (YAML + handlers)</h3>
+        <h3 style={{ color: '#e6edf3', fontSize: '1.25rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>3. Config-driven (YAML + handlers)</h3>
         <p style={{ color: '#8b949e', marginBottom: 16 }}>
           Define the graph in YAML; write handlers in code. Best for production deployments where non-engineers need to adjust the flow.
         </p>
