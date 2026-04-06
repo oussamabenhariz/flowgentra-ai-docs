@@ -1,6 +1,7 @@
 import DocLayout from '../components/DocLayout'
 import CodeBlock from '../components/CodeBlock'
 import { useLanguage } from '../context/LanguageContext'
+import { Link } from 'react-router-dom'
 
 const anchors = [
   { id: 'overview', label: 'Overview' },
@@ -261,10 +262,10 @@ result = agent.run()`}
 
       <Section id="next-steps" title="Next Steps">
         <ul style={{ color: '#8b949e', lineHeight: 1.7, paddingLeft: 20 }}>
-          <li><a href="/docs/installation" style={{ color: '#58a6ff' }}>Installation</a> — set up Rust or Python</li>
-          <li><a href="/docs/getting-started" style={{ color: '#58a6ff' }}>Quick Start</a> — build your first graph in 5 minutes</li>
-          <li><a href="/docs/concepts/state" style={{ color: '#58a6ff' }}>State Management</a> — understand how state works</li>
-          <li><a href="/docs/concepts/graphs" style={{ color: '#58a6ff' }}>Graph Execution</a> — understand how graphs execute</li>
+          <li><Link to="/docs/installation" style={{ color: '#58a6ff' }}>Installation</Link> — set up Rust or Python</li>
+          <li><Link to="/docs/getting-started" style={{ color: '#58a6ff' }}>Quick Start</Link> — build your first graph in 5 minutes</li>
+          <li><Link to="/docs/concepts/state" style={{ color: '#58a6ff' }}>State Management</Link> — understand how state works</li>
+          <li><Link to="/docs/concepts/graphs" style={{ color: '#58a6ff' }}>Graph Execution</Link> — understand how graphs execute</li>
         </ul>
       </Section>
     </DocLayout>

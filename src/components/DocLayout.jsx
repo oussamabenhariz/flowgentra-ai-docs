@@ -22,15 +22,7 @@ const sidebarLinks = [
     group: 'Guides',
     links: [
       { to: '/docs/guides/agents', label: 'Building Agents' },
-      { to: '/docs/guides/graphs', label: 'Working with Graphs' },
-      { to: '/docs/guides/human-in-the-loop', label: 'Human-in-the-Loop' },
       { to: '/docs/guides/llm-client', label: 'LLM Integration' },
-      { to: '/docs/guides/memory', label: 'Memory & Persistence' },
-      { to: '/docs/guides/observability', label: 'Observability' },
-      { to: '/docs/guides/rag', label: 'RAG Systems' },
-      { to: '/docs/guides/state', label: 'State Management' },
-      { to: '/docs/guides/supervisor', label: 'Multi-Agent Systems' },
-      { to: '/docs/guides/tools', label: 'Tool Integration' },
     ],
   },
   {
