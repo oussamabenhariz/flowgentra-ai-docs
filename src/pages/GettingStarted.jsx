@@ -1,163 +1,171 @@
 import DocLayout from '../components/DocLayout'
-import CodeBlock from '../components/CodeBlock'
-import { useLanguage } from '../context/LanguageContext'
 import { Link } from 'react-router-dom'
+import { useLanguage } from '../context/LanguageContext'
 
 const anchors = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'quick-start', label: 'Quick Start' },
-  { id: 'two-patterns', label: 'Two Patterns' },
-  { id: 'next-steps', label: 'Next Steps' },
+  { id: 'what',          label: 'What is Flowgentra?' },
+  { id: 'choose-path',   label: 'Choose Your Path' },
+  { id: 'three-concepts', label: 'Three Core Concepts' },
+  { id: 'explore',       label: 'Explore the Docs' },
 ]
 
 export default function GettingStarted() {
-  const { language } = useLanguage()
+  const { language, setLanguage } = useLanguage()
   const isRust = language === 'rust'
 
   return (
     <DocLayout anchors={anchors}>
-      <h1 style={{ fontSize: '2rem', fontWeight: 700, color: '#e6edf3', letterSpacing: '-0.02em', marginBottom: 8, marginTop: 0 }}>
-        Getting Started
-      </h1>
-      <p style={{ color: '#8b949e', marginBottom: 40, lineHeight: 1.7 }}>
-        Build your first Flowgentra agent in {isRust ? 'Rust' : 'Python'} in 5 minutes.
+      <h1 style={h1}>Introduction</h1>
+      <p style={lead}>
+        Flowgentra is a high-performance framework for building stateful, multi-step AI agents as typed graphs.
+        It has a Rust core with Python bindings — you can use either language independently.
       </p>
 
-      <Section id="overview" title="Overview">
-        <p style={{ color: '#8b949e', lineHeight: 1.75, margin: 0 }}>
-          Flowgentra models your AI agent as a <strong style={{ color: '#e6edf3' }}>directed graph</strong>.
-          Each node is a function that reads and writes shared state.
-          Edges define execution order. Conditional edges allow dynamic branching.
-          The compiled graph runs synchronously or asynchronously, returning final state.
+      <Section id="what" title="What is Flowgentra?">
+        <p style={muted}>
+          Modern AI applications are more than a single LLM call. They involve sequences of steps: fetching data, calling tools, making decisions, looping until a goal is met.
+          Managing this complexity with plain code becomes unmaintainable fast.
         </p>
-      </Section>
-
-      <Section id="quick-start" title="Quick Start">
-        <p style={{ color: '#8b949e', marginBottom: 16 }}>
-          {isRust
-            ? 'Add flowgentra to your Cargo.toml, then:'
-            : 'Install flowgentra, then:'}
-        </p>
-        <CodeBlock
-          rust={`use flowgentra::prelude::*;
-
-#[derive(State, Default)]
-struct GreetState {
-    name: String,
-    greeting: String,
-}
-
-#[node]
-async fn greet(state: &mut GreetState) -> Result<()> {
-    state.greeting = format!("Hello, {}! 👋", state.name);
-    Ok(())
-}
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    let graph = StateGraph::<GreetState>::builder()
-        .add_node("greet", greet)
-        .set_entry("greet")
-        .build()?;
-
-    let result = graph.invoke(GreetState {
-        name: "world".into(),
-        ..Default::default()
-    }).await?;
-
-    println!("{}", result.greeting);
-    Ok(())
-}`}
-          python={`from flowgentra_ai.graph import StateGraph, END
-from typing import TypedDict
-
-class GreetState(TypedDict):
-    name: str
-    greeting: str
-
-def greet(state: GreetState) -> GreetState:
-    return {**state, "greeting": f"Hello, {state['name']}! 👋"}
-
-builder = StateGraph(GreetState)
-builder.add_node("greet", greet)
-builder.set_entry_point("greet")
-builder.add_edge("greet", END)
-graph = builder.compile()
-
-result = graph.invoke({"name": "world", "greeting": ""})
-print(result["greeting"])
-# Hello, world! 👋`}
-        />
-      </Section>
-
-      <Section id="two-patterns" title="Two Patterns">
-        <p style={{ color: '#8b949e', lineHeight: 1.75, marginBottom: 24 }}>
-          Flowgentra supports two complementary ways to build agents. Both work in {isRust ? 'Rust' : 'Python'}.
+        <p style={muted}>
+          Flowgentra gives you a <strong style={{ color: '#e6edf3' }}>graph abstraction</strong> for this.
+          You define your agent as a directed graph of nodes (functions), connect them with edges, and Flowgentra handles execution, state management, checkpointing, and routing.
         </p>
 
-        <PatternCard
-          number="1"
-          title="Code-Driven"
-          badge="Good for: scripts, prototypes"
-          description="Define the graph entirely in code. Best for small agents where the graph topology is fixed."
-        >
-          <CodeBlock
-            rust={`// All wiring in code
-let graph = StateGraph::<MyState>::builder()
-    .add_node("a", node_a)
-    .add_node("b", node_b)
-    .add_edge("a", "b")
-    .set_entry("a")
-    .build()?;`}
-            python={`# All wiring in code
-builder = StateGraph(MyState)
-builder.add_node("a", node_a)
-builder.add_node("b", node_b)
-builder.add_edge("a", "b")
-builder.set_entry_point("a")
-graph = builder.compile()`}
-          />
-        </PatternCard>
-
-        <PatternCard
-          number="2"
-          title="Config-Driven"
-          badge="Recommended for production"
-          description="Define topology in YAML, handlers in code with @register_handler. Swap configs without recompiling."
-        >
-          <CodeBlock
-            rust={`// agent.yaml defines the graph
-// handlers discovered via #[register_handler]
-let agent = Agent::from_config_path("agent.yaml")?;
-let result = agent.invoke(serde_json::json!({
-    "query": "tell me about Rust"
-})).await?;`}
-            python={`# agent.yaml defines the graph
-# handlers discovered via @register_handler
-agent = Agent.from_config_path("agent.yaml")
-result = await agent.invoke({
-    "query": "tell me about Python"
-})`}
-          />
-        </PatternCard>
-      </Section>
-
-      <Section id="next-steps" title="Next Steps">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14, marginTop: 16 }}>
           {[
-            { to: '/docs/installation', label: '📦 Installation', desc: 'Add to your project' },
-            { to: '/docs/api-reference', label: '📖 API Reference', desc: 'Full API docs' },
-            { to: '/docs/examples', label: '💡 Examples', desc: 'Real-world patterns' },
-          ].map(item => (
-            <Link key={item.to} to={item.to} style={{
+            { icon: '⚡', title: 'Rust-powered', body: 'The execution engine is written in Rust. Python bindings run at near-native speed via PyO3 — no GIL bottlenecks on graph execution.' },
+            { icon: '📊', title: 'Inspired by LangGraph', body: 'If you\'ve used LangGraph, Flowgentra will feel familiar. It uses the same graph model with additional performance, multi-language support, and built-in multi-agent strategies.' },
+            { icon: '🏭', title: 'Production-ready', body: 'Built-in checkpointing, retry nodes, timeout nodes, token tracking, cost estimation, and observability tracing.' },
+          ].map(f => (
+            <div key={f.title} style={{ background: '#161b22', border: '1px solid #21262d', borderRadius: 8, padding: '18px 20px' }}>
+              <div style={{ fontSize: '1.5rem', marginBottom: 10 }}>{f.icon}</div>
+              <div style={{ fontWeight: 600, color: '#e6edf3', marginBottom: 6 }}>{f.title}</div>
+              <p style={{ color: '#8b949e', fontSize: '0.875rem', lineHeight: 1.65, margin: 0 }}>{f.body}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section id="choose-path" title="Choose Your Path">
+        <p style={muted}>
+          The documentation is organized with two parallel paths — one for Rust, one for Python.
+          Use the language switcher in the navbar to toggle code examples throughout the site.
+        </p>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 8 }}>
+          <Link to="/docs/quickstart-rust" style={{
+            flex: '1 1 260px',
+            display: 'flex', gap: 18, alignItems: 'flex-start',
+            background: isRust ? 'rgba(206,66,43,0.08)' : '#161b22',
+            border: `2px solid ${isRust ? '#CE422B' : '#21262d'}`,
+            borderRadius: 10, padding: '22px 24px', textDecoration: 'none',
+            transition: 'border-color 0.2s',
+          }}
+            onClick={() => setLanguage('rust')}
+            onMouseEnter={e => e.currentTarget.style.borderColor = '#CE422B'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = isRust ? '#CE422B' : '#21262d'}>
+            <span style={{ fontSize: '2.5rem', lineHeight: 1, flexShrink: 0 }}>🦀</span>
+            <div>
+              <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: 6, fontSize: '1.0625rem' }}>Rust Quickstart</div>
+              <p style={{ color: '#8b949e', fontSize: '0.875rem', lineHeight: 1.65, margin: '0 0 12px' }}>
+                Compile-time state guarantees, zero-cost abstractions, async-first. Best for performance-critical production systems.
+              </p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {['Type-safe', 'Async', 'Zero-cost'].map(tag => (
+                  <span key={tag} style={{ background: 'rgba(206,66,43,0.12)', border: '1px solid rgba(206,66,43,0.3)', borderRadius: 12, padding: '2px 8px', fontSize: '0.75rem', color: '#CE422B' }}>{tag}</span>
+                ))}
+              </div>
+            </div>
+          </Link>
+
+          <Link to="/docs/quickstart-python" style={{
+            flex: '1 1 260px',
+            display: 'flex', gap: 18, alignItems: 'flex-start',
+            background: !isRust ? 'rgba(53,114,165,0.08)' : '#161b22',
+            border: `2px solid ${!isRust ? '#3572A5' : '#21262d'}`,
+            borderRadius: 10, padding: '22px 24px', textDecoration: 'none',
+            transition: 'border-color 0.2s',
+          }}
+            onClick={() => setLanguage('python')}
+            onMouseEnter={e => e.currentTarget.style.borderColor = '#3572A5'}
+            onMouseLeave={e => e.currentTarget.style.borderColor = !isRust ? '#3572A5' : '#21262d'}>
+            <span style={{ fontSize: '2.5rem', lineHeight: 1, flexShrink: 0 }}>🐍</span>
+            <div>
+              <div style={{ fontWeight: 700, color: '#e6edf3', marginBottom: 6, fontSize: '1.0625rem' }}>Python Quickstart</div>
+              <p style={{ color: '#8b949e', fontSize: '0.875rem', lineHeight: 1.65, margin: '0 0 12px' }}>
+                Ergonomic API, fast iteration, LangGraph-compatible patterns. Best for prototyping and data science workflows.
+              </p>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {['Ergonomic', 'Familiar', 'LangGraph-compatible'].map(tag => (
+                  <span key={tag} style={{ background: 'rgba(53,114,165,0.12)', border: '1px solid rgba(53,114,165,0.3)', borderRadius: 12, padding: '2px 8px', fontSize: '0.75rem', color: '#3572A5' }}>{tag}</span>
+                ))}
+              </div>
+            </div>
+          </Link>
+        </div>
+      </Section>
+
+      <Section id="three-concepts" title="Three Core Concepts">
+        <p style={muted}>You only need three things to build a Flowgentra agent:</p>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[
+            {
+              num: '1', accent: '#CE422B', title: 'State',
+              body: 'A typed container of key-value data that flows through the entire graph. Every node reads from and writes to state. In Rust: a struct with #[derive(State)]. In Python: a TypedDict or State instance.',
+              link: '/docs/concepts/state',
+            },
+            {
+              num: '2', accent: '#3572A5', title: 'Nodes',
+              body: 'Functions that receive state and return updated state. Nodes do the actual work: call LLMs, execute tools, transform data, make decisions. One node = one unit of responsibility.',
+              link: '/docs/concepts/nodes',
+            },
+            {
+              num: '3', accent: '#3fb950', title: 'Graph',
+              body: 'The wiring that connects nodes. Edges define execution order. Conditional edges route dynamically based on state. You compile a graph once, then invoke it many times.',
+              link: '/docs/concepts/graphs',
+            },
+          ].map(c => (
+            <Link key={c.num} to={c.link} style={{
+              display: 'flex', gap: 16, alignItems: 'flex-start',
               background: '#161b22', border: '1px solid #21262d',
-              borderRadius: 8, padding: '16px 18px', textDecoration: 'none',
-              display: 'block', transition: 'border-color 0.2s',
+              borderRadius: 8, padding: '18px 20px', textDecoration: 'none',
+              transition: 'border-color 0.2s',
             }}
+              onMouseEnter={e => e.currentTarget.style.borderColor = c.accent}
+              onMouseLeave={e => e.currentTarget.style.borderColor = '#21262d'}>
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%', background: c.accent,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.9rem', fontWeight: 700, color: '#fff', flexShrink: 0,
+              }}>{c.num}</div>
+              <div>
+                <div style={{ fontWeight: 600, color: '#e6edf3', marginBottom: 4 }}>{c.title}</div>
+                <p style={{ color: '#8b949e', fontSize: '0.875rem', lineHeight: 1.65, margin: 0 }}>{c.body}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </Section>
+
+      <Section id="explore" title="Explore the Docs">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
+          {[
+            { to: '/docs/installation',      emoji: '📦', label: 'Installation',          desc: 'Cargo, pip, or build from source' },
+            { to: '/docs/guides/agents',     emoji: '🤖', label: 'Building Agents',       desc: 'ZeroShotReAct, conversational, config-driven' },
+            { to: '/docs/guides/llm-client', emoji: '🔌', label: 'LLM Integration',       desc: '7 providers, tool calling, streaming' },
+            { to: '/docs/guides/rag',        emoji: '🔍', label: 'RAG',                   desc: 'Embeddings, vector stores, retrieval' },
+            { to: '/docs/guides/supervisor', emoji: '🎯', label: 'Multi-Agent Systems',   desc: '11 orchestration strategies' },
+            { to: '/docs/guides/memory',     emoji: '💾', label: 'Memory',                desc: 'Conversation history, checkpointing' },
+            { to: '/docs/api/state-graph',   emoji: '📖', label: 'API Reference',         desc: 'Complete API for all modules' },
+            { to: '/docs/examples',          emoji: '💡', label: 'Examples',              desc: 'Chatbot, RAG agent, multi-agent' },
+          ].map(item => (
+            <Link key={item.to} to={item.to} style={card}
               onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
               onMouseLeave={e => e.currentTarget.style.borderColor = '#21262d'}>
-              <div style={{ fontWeight: 600, color: '#e6edf3', marginBottom: 4 }}>{item.label}</div>
-              <div style={{ fontSize: '0.875rem', color: '#8b949e' }}>{item.desc}</div>
+              <span style={{ fontSize: '1.25rem', marginBottom: 6, display: 'block' }}>{item.emoji}</span>
+              <div style={{ fontWeight: 600, color: '#e6edf3', marginBottom: 4, fontSize: '0.9375rem' }}>{item.label}</div>
+              <div style={{ fontSize: '0.8125rem', color: '#8b949e', lineHeight: 1.5 }}>{item.desc}</div>
             </Link>
           ))}
         </div>
@@ -175,16 +183,11 @@ function Section({ id, title, children }) {
   )
 }
 
-function PatternCard({ number, title, badge, description, children }) {
-  return (
-    <div style={{ background: '#161b22', border: '1px solid #21262d', borderRadius: 8, padding: '20px', marginBottom: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-        <span style={{ background: 'var(--accent)', color: '#fff', width: 22, height: 22, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>{number}</span>
-        <strong style={{ color: '#e6edf3', fontSize: '1rem' }}>{title}</strong>
-        <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: '0.7rem', padding: '2px 8px', borderRadius: 10, border: '1px solid var(--accent)', fontWeight: 500, marginLeft: 'auto' }}>{badge}</span>
-      </div>
-      <p style={{ color: '#8b949e', marginBottom: 14, lineHeight: 1.6, fontSize: '0.9rem' }}>{description}</p>
-      {children}
-    </div>
-  )
+const h1 = { fontSize: '2rem', fontWeight: 700, color: '#e6edf3', letterSpacing: '-0.02em', marginBottom: 8, marginTop: 0 }
+const lead = { color: '#8b949e', marginBottom: 40, lineHeight: 1.7, fontSize: '1.0625rem' }
+const muted = { color: '#8b949e', lineHeight: 1.75, marginBottom: 16 }
+const card = {
+  background: '#161b22', border: '1px solid #21262d',
+  borderRadius: 8, padding: '18px 18px', textDecoration: 'none',
+  display: 'block', transition: 'border-color 0.2s',
 }

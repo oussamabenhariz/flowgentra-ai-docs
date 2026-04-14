@@ -1,0 +1,365 @@
+/* ConceptsList Styling */
+
+.concepts-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.concepts-hero {
+  text-align: center;
+  margin-bottom: 60px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 60px 20px;
+  border-radius: 12px;
+  margin: -40px -20px 60px -20px;
+}
+
+.concepts-hero h1 {
+  font-size: 3em;
+  margin: 0 0 10px 0;
+}
+
+.concepts-hero p {
+  font-size: 1.2em;
+  margin: 0;
+  opacity: 0.95;
+}
+
+/* Concept Sections */
+.concept-section {
+  margin-bottom: 80px;
+}
+
+.section-header {
+  margin-bottom: 40px;
+}
+
+.section-header h2 {
+  font-size: 2em;
+  margin: 0 0 10px 0;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.section-icon {
+  font-size: 2.2em;
+}
+
+.section-description {
+  color: #666;
+  font-size: 1.05em;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Concepts Grid */
+.concepts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+}
+
+.concept-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.concept-card:hover {
+  border-color: #667eea;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.15);
+  transform: translateY(-3px);
+}
+
+.concept-header {
+  padding: 20px;
+  background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+}
+
+.concept-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.2em;
+  color: #333;
+}
+
+.concept-short-desc {
+  margin: 0;
+  color: #666;
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+
+.concept-expanded {
+  padding: 20px;
+  border-top: 2px solid #f0f0f0;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+  }
+}
+
+/* Expanded Content */
+.takeaways,
+.patterns,
+.node-types,
+.examples,
+.edge-types,
+.routing,
+.handler-pattern,
+.providers,
+.memory-types,
+.components,
+.workflow {
+  margin-bottom: 20px;
+}
+
+.takeaways h4,
+.patterns h4,
+.node-types h4,
+.examples h4,
+.edge-types h4,
+.routing h4,
+.handler-pattern h4,
+.providers h4,
+.memory-types h4,
+.components h4,
+.workflow h4 {
+  margin: 0 0 12px 0;
+  font-size: 0.95em;
+  color: #667eea;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.takeaways ul,
+.routing ul,
+.handler-pattern ul,
+.examples ul {
+  margin: 0;
+  padding-left: 20px;
+  list-style-position: inside;
+}
+
+.takeaways li,
+.routing li,
+.handler-pattern li,
+.examples li {
+  color: #555;
+  font-size: 0.9em;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+.patterns-list,
+.types-list,
+.types-grid,
+.providers-list,
+.components-list,
+.edge-types .types-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pattern-item,
+.type-item,
+.edge-item,
+.provider-item,
+.component-item {
+  padding: 12px;
+  background: #f9f9f9;
+  border-left: 3px solid #667eea;
+  border-radius: 4px;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.pattern-item strong,
+.type-item strong,
+.edge-item strong,
+.provider-item strong,
+.component-item strong {
+  color: #333;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.provider-item p {
+  margin: 4px 0 0 0;
+  color: #666;
+  font-size: 0.85em;
+}
+
+.types-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.type-item {
+  text-align: center;
+  border-left: none;
+  border-top: 3px solid #667eea;
+}
+
+.workflow {
+  background: #f9f9f9;
+  padding: 15px;
+  border-radius: 6px;
+  border-left: 3px solid #667eea;
+}
+
+.workflow ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.workflow li {
+  color: #555;
+  font-size: 0.9em;
+  line-height: 1.6;
+  margin-bottom: 8px;
+}
+
+/* Buttons */
+.learn-more-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 15px;
+}
+
+.learn-more-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.expand-hint {
+  padding: 10px 20px;
+  background: #f5f5f5;
+  text-align: center;
+  font-size: 0.8em;
+  color: #999;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* Navigation Back */
+.nav-back {
+  margin-top: 60px;
+  padding-top: 40px;
+  border-top: 2px solid #e0e0e0;
+  text-align: center;
+}
+
+.nav-back a {
+  color: #667eea;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.nav-back a:hover {
+  color: #764ba2;
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .concepts-container {
+    padding: 20px 16px;
+  }
+
+  .concepts-hero {
+    margin: -20px -16px 40px -16px;
+    padding: 40px 16px;
+  }
+
+  .concepts-hero h1 {
+    font-size: 2em;
+  }
+
+  .concepts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .types-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-header h2 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .concept-card {
+    background: #2a2a2a;
+    border-color: #444;
+  }
+
+  .concept-card:hover {
+    border-color: #667eea;
+  }
+
+  .concept-header {
+    background: #333;
+  }
+
+  .concept-header h3 {
+    color: #fff;
+  }
+
+  .concept-short-desc,
+  .takeaways li,
+  .routing li,
+  .handler-pattern li,
+  .examples li,
+  .pattern-item,
+  .type-item,
+  .edge-item,
+  .provider-item,
+  .component-item {
+    color: #ccc;
+  }
+
+  .pattern-item strong,
+  .type-item strong,
+  .edge-item strong,
+  .provider-item strong,
+  .component-item strong {
+    color: #fff;
+  }
+
+  .workflow {
+    background: #333;
+  }
+
+  .workflow li {
+    color: #ccc;
+  }
+}

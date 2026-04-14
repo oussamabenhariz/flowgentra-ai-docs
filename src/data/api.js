@@ -1050,6 +1050,359 @@ for span in trace.spans:
     },
   },
 
+  // ─── DOCUMENT LOADERS ────────────────────────────────────────────────────────
+  {
+    id: 'document-loaders',
+    topic: 'data-loading',
+    name: 'Document Loaders',
+    summary: 'Load and process documents from files, directories, and various formats (PDF, Markdown, HTML, JSON, CSV, plain text).',
+    rust: {
+      signature: 'load_document(path: &Path) -> Result<LoadedDocument>',
+      description: 'Auto-detects file type and extracts content. Supports PDF text extraction, Markdown parsing, HTML stripping, and structured data formats.',
+      params: [
+        { name: 'path', type: '&Path', description: 'Path to document file' },
+      ],
+      returns: 'LoadedDocument with metadata and content',
+      example: `use flowgentra_ai::data::load_document;
+
+let doc = load_document("./research_paper.pdf")?;
+println!("Loaded: {} ({} chars)", doc.filename, doc.content.len());`,
+    },
+    python: {
+      signature: 'load_document(path: str) -> LoadedDocument',
+      description: 'Load a single document with automatic format detection. Returns document content, metadata, and file information.',
+      params: [
+        { name: 'path', type: 'str', description: 'Path to the document file' },
+      ],
+      returns: 'LoadedDocument — content, metadata, filename, file_type',
+      example: `from flowgentra_ai.document_loaders import load_document
+
+doc = load_document("./research_paper.pdf")
+print(f"Loaded: {doc.filename} ({len(doc.content)} chars)")
+print(f"Type: {doc.file_type}")`,
+    },
+  },
+
+  // ─── TEXT SPLITTING ──────────────────────────────────────────────────────────
+  {
+    id: 'text-splitters',
+    topic: 'text-processing',
+    name: 'Text Splitters',
+    summary: 'Split large documents into chunks for embedding and retrieval. Choose from character-based, token-based, or content-aware splitters.',
+    rust: {
+      signature: 'RecursiveCharacterTextSplitter::new(config: ChunkConfig) -> Self',
+      description: 'Smart text splitting that respects content structure. Tries paragraph → sentence → word boundaries before falling back to character splitting.',
+      params: [
+        { name: 'chunk_size', type: 'usize', description: 'Maximum characters per chunk' },
+        { name: 'chunk_overlap', type: 'usize', description: 'Characters to overlap between chunks' },
+        { name: 'separators', type: 'Vec<String>', description: 'Ordered list of separator strings to try' },
+      ],
+      returns: 'Configured text splitter',
+      example: `use flowgentra_ai::text_splitter::RecursiveCharacterTextSplitter;
+
+let splitter = RecursiveCharacterTextSplitter::new(ChunkConfig {
+    chunk_size: 1000,
+    chunk_overlap: 200,
+    separators: vec!["\\n\\n".to_string(), "\\n".to_string(), " ".to_string()],
+});
+
+let chunks = splitter.split_documents(documents)?;`,
+    },
+    python: {
+      signature: 'RecursiveCharacterTextSplitter(chunk_size=1000, overlap=200, separators=None)',
+      description: 'Content-aware text splitting. Automatically tries separators in order: paragraphs, sentences, words, characters.',
+      params: [
+        { name: 'chunk_size', type: 'int', description: 'Maximum characters per chunk. Default: 1000' },
+        { name: 'overlap', type: 'int', description: 'Character overlap between chunks. Default: 200' },
+        { name: 'separators', type: 'List[str]', description: 'Custom separator priority list. Default: ["\\n\\n", "\\n", " ", ""]' },
+      ],
+      returns: 'Configured splitter instance',
+      example: `from flowgentra_ai.rag import RecursiveCharacterTextSplitter
+
+splitter = RecursiveCharacterTextSplitter(chunk_size=1000, overlap=200)
+chunks = splitter.split("Long document text...")
+
+# Content-aware splitters
+markdown_splitter = MarkdownTextSplitter(chunk_size=500)
+html_splitter = HTMLTextSplitter(chunk_size=500)
+code_splitter = CodeTextSplitter(chunk_size=500)  # Respects function/class boundaries`,
+    },
+  },
+
+  // ─── RERANKERS ───────────────────────────────────────────────────────────────
+  {
+    id: 'rerankers',
+    topic: 'search-ranking',
+    name: 'Rerankers',
+    summary: 'Improve search result quality by reranking retrieved documents. Choose from RRF, cross-encoders, or LLM-based reranking.',
+    rust: {
+      signature: 'RRFReranker::new(k: usize) -> Self',
+      description: 'Reciprocal Rank Fusion combines multiple ranking signals. Effective for hybrid search (semantic + keyword).',
+      params: [
+        { name: 'k', type: 'usize', description: 'RRF parameter controlling rank influence. Default: 60' },
+      ],
+      returns: 'Configured RRF reranker',
+      example: `use flowgentra_ai::reranking::RRFReranker;
+
+let reranker = RRFReranker::new(60);
+let reranked = reranker.rerank(search_results)?;`,
+    },
+    python: {
+      signature: 'RRFReranker(k=60)',
+      description: 'Reciprocal Rank Fusion for combining multiple ranking sources. Mathematically sound approach to fusion.',
+      params: [
+        { name: 'k', type: 'int', description: 'RRF parameter. Higher = more influence from original ranking. Default: 60' },
+      ],
+      returns: 'Reranker instance',
+      example: `from flowgentra_ai.rerankers import RRFReranker, CrossEncoderReranker
+
+# RRF for hybrid search
+rrf = RRFReranker(k=60)
+reranked_results = rrf.rerank(search_results)
+
+# Cross-encoder for quality (slower but better)
+cross_encoder = CrossEncoderReranker(model="cross-encoder/ms-marco-MiniLM-L-6-v2")
+reranked = cross_encoder.rerank(results)
+
+# LLM-based reranking (most accurate)
+llm_reranker = LLMReranker(model="gpt-4", prompt_template=custom_prompt)`,
+    },
+  },
+
+  // ─── EVALUATION METRICS ──────────────────────────────────────────────────────
+  {
+    id: 'evaluation-metrics',
+    topic: 'evaluation',
+    name: 'Evaluation Metrics',
+    summary: 'Measure retrieval and generation quality with standard metrics: Hit Rate, MRR, NDCG, and custom scoring functions.',
+    rust: {
+      signature: 'hit_rate(results: &[SearchResult], ground_truth: &[String]) -> f64',
+      description: 'Fraction of queries where at least one relevant document was retrieved. Simple but effective baseline metric.',
+      params: [
+        { name: 'results', type: '&[SearchResult]', description: 'Retrieved documents for each query' },
+        { name: 'ground_truth', type: '&[String]', description: 'Relevant document IDs for each query' },
+      ],
+      returns: 'Hit rate as fraction (0.0 to 1.0)',
+      example: `use flowgentra_ai::evaluation::{hit_rate, mrr};
+
+let hit_rate_score = hit_rate(&retrieval_results, &ground_truth)?;
+let mrr_score = mrr(&retrieval_results, &ground_truth)?;`,
+    },
+    python: {
+      signature: 'hit_rate(results: List[List[SearchResult]], ground_truth: List[List[str]]) -> float',
+      description: 'Hit Rate: Fraction of queries that retrieved at least one relevant document. Good baseline metric.',
+      params: [
+        { name: 'results', type: 'List[List[SearchResult]]', description: 'Retrieved results for each query' },
+        { name: 'ground_truth', type: 'List[List[str]]', description: 'Relevant document IDs for each query' },
+      ],
+      returns: 'Hit rate as float (0.0 to 1.0)',
+      example: `from flowgentra_ai.evaluation import hit_rate, mrr, mean_ndcg
+
+# Basic metrics
+hr = hit_rate(retrieval_results, ground_truth)
+mrr_score = mrr(retrieval_results, ground_truth)
+ndcg = mean_ndcg(retrieval_results, ground_truth, k=10)
+
+# Full evaluation pipeline
+from flowgentra_ai.evaluation import rag_evaluate, EvaluationConfig
+
+config = EvaluationConfig(
+    metrics=["hit_rate", "mrr", "ndcg@5", "ndcg@10"],
+    grading_config=GradingConfig(temperature=0.1)
+)
+
+results = rag_evaluate(queries, results, ground_truth, config)`,
+    },
+  },
+
+  // ─── MEMORY TYPES ────────────────────────────────────────────────────────────
+  {
+    id: 'memory-types',
+    topic: 'memory',
+    name: 'Memory Systems',
+    summary: 'Persistent conversation memory with different strategies: conversation buffer, token limits, summarization, and checkpoints.',
+    rust: {
+      signature: 'ConversationMemory::new() -> Self',
+      description: 'Simple append-only memory for conversation history. Grows indefinitely — use TokenBufferMemory for bounded memory.',
+      params: [],
+      returns: 'Conversation memory instance',
+      example: `use flowgentra_ai::memory::ConversationMemory;
+
+let memory = ConversationMemory::new();
+memory.add_message("user", "Hello")?;
+memory.add_message("assistant", "Hi there!");
+
+// Retrieve full conversation
+let history = memory.get_messages()?;`,
+    },
+    python: {
+      signature: 'ConversationMemory()',
+      description: 'Basic conversation memory that stores all messages. Use TokenBufferMemory for memory with size limits.',
+      params: [],
+      returns: 'Memory instance',
+      example: `from flowgentra_ai.memory import ConversationMemory, TokenBufferMemory
+
+# Unlimited conversation memory
+memory = ConversationMemory()
+memory.add_message("user", "Hello")
+memory.add_message("assistant", "Hi!")
+
+# Bounded memory (token limit)
+token_memory = TokenBufferMemory(max_tokens=2000, llm_for_count="gpt-4")
+
+# Summarization memory (compresses old messages)
+summary_memory = SummaryMemory(
+    llm=LLMClient(LLMConfig("gpt-4")),
+    summary_prompt="Summarize the conversation so far:"
+)`,
+    },
+  },
+
+  // ─── ADVANCED NODES ──────────────────────────────────────────────────────────
+  {
+    id: 'advanced-nodes',
+    topic: 'nodes',
+    name: 'Advanced Node Types',
+    summary: 'Sophisticated workflow nodes: retry logic, timeouts, parallel execution, branching, loops, and subgraph composition.',
+    rust: {
+      signature: 'RetryNode::new(max_retries: usize, backoff: BackoffStrategy) -> Self',
+      description: 'Automatically retry failed node executions with exponential backoff. Useful for unreliable operations.',
+      params: [
+        { name: 'max_retries', type: 'usize', description: 'Maximum retry attempts' },
+        { name: 'backoff', type: 'BackoffStrategy', description: 'Exponential, linear, or fixed delay strategy' },
+      ],
+      returns: 'Configured retry node',
+      example: `use flowgentra_ai::nodes::RetryNode;
+
+let retry_node = RetryNode::new(3, BackoffStrategy::Exponential);
+graph.add_node("unreliable_task", retry_node.wrap(my_fallible_node))?;`,
+    },
+    python: {
+      signature: 'RetryNode(max_retries=3, backoff_strategy="exponential")',
+      description: 'Wrap any node with automatic retry logic. Handles transient failures gracefully.',
+      params: [
+        { name: 'max_retries', type: 'int', description: 'Maximum retry attempts. Default: 3' },
+        { name: 'backoff_strategy', type: 'str', description: '"exponential" | "linear" | "fixed". Default: "exponential"' },
+      ],
+      returns: 'Retry node wrapper',
+      example: `from flowgentra_ai.nodes import RetryNode, TimeoutNode, ParallelNodeConfig
+
+# Retry failed operations
+retry_node = RetryNode(max_retries=3)
+builder.add_node("unreliable_api", retry_node.wrap(api_call_node))
+
+# Timeout protection
+timeout_node = TimeoutNode(timeout_seconds=30.0)
+builder.add_node("slow_task", timeout_node.wrap(processing_node))
+
+# Parallel execution
+parallel_config = ParallelNodeConfig(
+    nodes=["task_a", "task_b", "task_c"],
+    merge_strategy="concatenate"
+)`,
+    },
+  },
+
+  // ─── SUPERVISION ─────────────────────────────────────────────────────────────
+  {
+    id: 'supervision',
+    topic: 'multi-agent',
+    name: 'Multi-Agent Supervision',
+    summary: 'Orchestrate multiple agents with supervisors, planners, and parallel execution strategies.',
+    rust: {
+      signature: 'Supervisor::new(agents: Vec<Agent>, strategy: OrchestrationStrategy) -> Self',
+      description: 'Coordinate multiple agents with different orchestration patterns: sequential, parallel, or hierarchical.',
+      params: [
+        { name: 'agents', type: 'Vec<Agent>', description: 'Child agents to supervise' },
+        { name: 'strategy', type: 'OrchestrationStrategy', description: 'How to coordinate agents' },
+      ],
+      returns: 'Configured supervisor',
+      example: `use flowgentra_ai::supervision::Supervisor;
+
+let supervisor = Supervisor::new(
+    vec![research_agent, writing_agent],
+    OrchestrationStrategy::Parallel
+);
+
+graph.add_node("team_work", supervisor.node())?;`,
+    },
+    python: {
+      signature: 'Supervisor(agents: List[Agent], strategy: OrchestrationStrategy = "parallel")',
+      description: 'Manage multiple agents with different coordination strategies. Distribute work and aggregate results.',
+      params: [
+        { name: 'agents', type: 'List[Agent]', description: 'List of agents to coordinate' },
+        { name: 'strategy', type: 'str', description: '"sequential" | "parallel" | "hierarchical". Default: "parallel"' },
+      ],
+      returns: 'Supervisor instance',
+      example: `from flowgentra_ai.supervision import Supervisor, PlannerNode
+
+# Parallel agent execution
+supervisor = Supervisor(
+    agents=[research_agent, analysis_agent, writer_agent],
+    strategy="parallel"
+)
+
+# Planner-based orchestration
+planner = PlannerNode(
+    llm=LLMClient(LLMConfig("gpt-4")),
+    available_agents=[agent1, agent2, agent3]
+)
+
+builder.add_node("plan_and_execute", planner)
+builder.add_node("supervise", supervisor)`,
+    },
+  },
+
+  // ─── TOOL REGISTRY ───────────────────────────────────────────────────────────
+  {
+    id: 'tool-registry',
+    topic: 'tools',
+    name: 'Tool Registry & Built-in Tools',
+    summary: 'Register custom tools and use built-in implementations: calculators, web requests, file operations, and search tools.',
+    rust: {
+      signature: 'ToolRegistry::new() -> Self',
+      description: 'Central registry for tool definitions and execution. Tools are functions that agents can call.',
+      params: [],
+      returns: 'Empty tool registry',
+      example: `use flowgentra_ai::tools::{ToolRegistry, ToolDefinition};
+
+let mut registry = ToolRegistry::new();
+
+// Register custom tool
+registry.register(ToolDefinition {
+    name: "calculate".to_string(),
+    description: "Calculate mathematical expressions".to_string(),
+    parameters: json_schema_for_calculator(),
+    handler: |args| async move { calculate(args).await },
+})?;`,
+    },
+    python: {
+      signature: 'ToolRegistry()',
+      description: 'Register and manage tools that agents can execute. Tools are functions with JSON schemas.',
+      params: [],
+      returns: 'Tool registry instance',
+      example: `from flowgentra_ai.tools import ToolRegistry, ToolNode, CalculatorTool
+
+registry = ToolRegistry()
+
+# Register custom tool
+@registry.register
+def calculate(expression: str) -> float:
+    """Calculate a mathematical expression."""
+    return eval(expression)  # In real code, use safe evaluation
+
+# Use built-in tools
+calc_tool = CalculatorTool()
+web_tool = WebRequestTool()
+search_tool = SearchTool()
+files_tool = FilesTool()
+
+# Add to graph
+tool_node = ToolNode(registry)
+builder.add_node("tools", tool_node)`,
+    },
+  },
+
   // ─── YAML CONFIG REFERENCE ────────────────────────────────────────────────────
   {
     id: 'yaml-config',

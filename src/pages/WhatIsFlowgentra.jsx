@@ -194,6 +194,82 @@ agent = Agent.create(
 result = agent.run_with_input("Hello!")`}
         />
 
+        <h4 style={{ color: '#e6edf3', fontSize: '1.1rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>Agent.create() Parameters</h4>
+        <div style={{
+          background: '#0d1117',
+          border: '1px solid #21262d',
+          borderRadius: 8,
+          padding: '20px',
+          marginBottom: 20
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', color: '#8b949e' }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Parameter</th>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Type</th>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Default</th>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>agent_type</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>string</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>required</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Agent behavior: "zero_shot_react", "few_shot_react", or "conversational"</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>model</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>string</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>"gpt-4"</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>LLM model identifier (e.g., "gpt-4", "claude-3-opus-20240229")</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.9em' }}>memory_steps</td>
+                <td style={{ padding: '8px' }}>int</td>
+                <td style={{ padding: '8px' }}>10</td>
+                <td style={{ padding: '8px' }}>Number of conversation turns to remember</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h4 style={{ color: '#e6edf3', fontSize: '1.1rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>Agent Types</h4>
+        <div style={{
+          background: '#0d1117',
+          border: '1px solid #21262d',
+          borderRadius: 8,
+          padding: '20px',
+          marginBottom: 20
+        }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', color: '#8b949e' }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Type</th>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Best For</th>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Characteristics</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>"zero_shot_react"</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>General tool use</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Reasoning + actions without examples</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>"few_shot_react"</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Specialized domains</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Uses example demonstrations</td>
+              </tr>
+              <tr>
+                <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.9em' }}>"conversational"</td>
+                <td style={{ padding: '8px' }}>Chat applications</td>
+                <td style={{ padding: '8px' }}>Multi-turn conversations with memory</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
         <h3 style={{ color: '#e6edf3', fontSize: '1.25rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>2. Code-first (direct API)</h3>
         <p style={{ color: '#8b949e', marginBottom: 16 }}>
           Build the graph programmatically. Best for complex logic with non-trivial routing.
