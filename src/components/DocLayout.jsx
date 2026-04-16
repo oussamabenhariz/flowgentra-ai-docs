@@ -45,6 +45,7 @@ export const ALL_DOC_PAGES = [
   // ── Resources ─────────────────────────────────────────────
   { to: '/docs/examples',       label: 'Examples',       group: 'Resources' },
   { to: '/docs/best-practices', label: 'Best Practices', group: 'Resources' },
+  { to: '/docs/glossary',       label: 'Glossary',       group: 'Resources' },
   { to: '/docs/faq',            label: 'FAQ',            group: 'Resources' },
   { to: '/docs/changelog',      label: 'Changelog',      group: 'Resources' },
 ]

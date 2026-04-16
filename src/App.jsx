@@ -40,6 +40,11 @@ import GuidesList from './pages/GuidesList'
 import ConceptsList from './pages/ConceptsList'
 import Examples from './pages/Examples'
 import Changelog from './pages/Changelog'
+import Glossary from './pages/Glossary'
+import PluginsCompleteGuide from './pages/PluginsCompleteGuide'
+import MiddlewareCompleteGuide from './pages/MiddlewareCompleteGuide'
+import ValidationCompleteGuide from './pages/ValidationCompleteGuide'
+import PerformanceOptimizationGuide from './pages/PerformanceOptimizationGuide'
 
 // Import navigation data structures
 import { navigationStructure, searchCategories, featureHighlights, useCaseNavigation } from './data/navigation'
@@ -87,9 +92,10 @@ export default function App() {
               <Route path="/docs/advanced-nodes"     element={<AdvancedNodesGuide />} />
               <Route path="/docs/reranking"          element={<RerankingGuide />} />
               <Route path="/docs/configuration"      element={<ConfigurationGuide />} />
-              <Route path="/docs/plugins"            element={<PluginsGuide />} />
-              <Route path="/docs/middleware"         element={<MiddlewareGuide />} />
-              <Route path="/docs/validation"         element={<ValidationGuide />} />
+              <Route path="/docs/plugins"            element={<PluginsCompleteGuide />} />
+              <Route path="/docs/middleware"          element={<MiddlewareCompleteGuide />} />
+              <Route path="/docs/validation"          element={<ValidationCompleteGuide />} />
+              <Route path="/docs/performance"         element={<PerformanceOptimizationGuide />} />
               <Route path="/docs/database"           element={<DatabaseGuide />} />
               <Route path="/docs/api/agent-builder"  element={<AgentBuilderGuide />} />
 
@@ -103,6 +109,7 @@ export default function App() {
               {/* Resources */}
               <Route path="/docs/examples"       element={<Examples />} />
               <Route path="/docs/best-practices" element={<BestPractices />} />
+              <Route path="/docs/glossary"       element={<Glossary />} />
               <Route path="/docs/faq"            element={<FAQ />} />
               <Route path="/docs/changelog"      element={<Changelog />} />
 

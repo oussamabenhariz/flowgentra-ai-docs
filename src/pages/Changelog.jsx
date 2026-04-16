@@ -3,9 +3,26 @@ import CodeBlock from '../components/CodeBlock'
 
 const releases = [
   {
-    version: '0.1.3',
-    date: '2025-04-05',
+    version: '0.1.5',
+    date: '2026-04-14',
     tag: 'latest',
+    changes: [
+      { type: 'feat',  text: 'Comprehensive documentation website with 46+ pages covering all modules' },
+      { type: 'feat',  text: 'Enhanced API reference with 40+ module categories for both Rust and Python' },
+      { type: 'feat',  text: 'New guides: Runtime & Execution, Database Integration, Agent Builder, Predefined Agents, LLM Providers' },
+      { type: 'feat',  text: 'Added Runtime module documentation covering execution model and async patterns' },
+      { type: 'docs',  text: 'Reorganized documentation with clear module-to-docs mapping for all Rust and Python APIs' },
+      { type: 'docs',  text: 'Updated navigation structure with 14 search categories for better discovery' },
+      { type: 'docs',  text: 'Added code examples for all major APIs in both Rust and Python' },
+    ],
+    rust: `# Cargo.toml
+flowgentra-ai = "0.1.5"`,
+    python: `pip install "flowgentra-ai==0.1.5"`,
+  },
+  {
+    version: '0.1.5',
+    date: '2025-04-05',
+    tag: null,
     changes: [
       { type: 'fix',      text: 'Python: all submodule imports now work correctly (use `from flowgentra_ai.graph import StateGraph`, not `from flowgentra import …`)' },
       { type: 'fix',      text: 'Python: `Agent.create()` now takes `model` string instead of `llm` LLMClient object; use `run_with_input(str)` on the returned agent' },
@@ -18,8 +35,8 @@ const releases = [
       { type: 'docs',     text: 'Updated all code examples to use correct `flowgentra_ai.*` submodule import paths' },
     ],
     rust: `# Cargo.toml
-flowgentra-ai = "0.1.3"`,
-    python: `pip install "flowgentra-ai==0.1.3"`,
+flowgentra-ai = "0.1.5"`,
+    python: `pip install "flowgentra-ai==0.1.5"`,
   },
   {
     version: '0.4.0',

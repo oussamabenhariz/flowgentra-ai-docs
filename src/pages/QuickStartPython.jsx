@@ -52,7 +52,7 @@ pip install "flowgentra-ai[openai,anthropic,tracing]"  # Multiple`} />
 
         <p style={{ ...muted, marginTop: 16 }}>Verify installation:</p>
         <CodeBlock forceLang="bash" rust={`python -c "import flowgentra_ai; print(flowgentra_ai.__version__)"
-# 0.1.3`} />
+# 0.1.5`} />
       </Section>
 
       <Section id="first-agent" title="Your First Agent">
