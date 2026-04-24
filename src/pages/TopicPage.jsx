@@ -10,7 +10,7 @@ const TOPIC_META = {
   'memory':          { title: 'Memory',             desc: 'Checkpointers, conversation memory, and multi-turn thread execution.' },
   'builtin-nodes':   { title: 'Built-in Nodes',    desc: 'Ready-to-use node types — LLMNode, RetryNode, TimeoutNode, HumanInTheLoop, and more.' },
   'agents':          { title: 'Agents',             desc: 'Predefined agent types: ZeroShotReAct, FewShotReAct, Conversational, and MemoryAwareAgent.' },
-  'llm':             { title: 'LLM Clients',        desc: 'All 7 providers, streaming, structured output, tool calling, caching, and cost tracking.' },
+  'llm':             { title: 'LLMs',        desc: 'All 7 providers, streaming, structured output, tool calling, caching, and cost tracking.' },
   'rag':             { title: 'RAG',                desc: 'Retrieval-augmented generation — vector stores, embeddings, text splitters, and retrieval utilities.' },
   'supervisor':      { title: 'Supervisor',         desc: 'Multi-agent orchestration with sequential, parallel, or LLM-routed strategies.' },
   'observability':   { title: 'Observability',      desc: 'Execution tracing, graph visualization (Mermaid / DOT), and output scoring.' },

@@ -15,7 +15,7 @@ struct AgentState {
 
 #[node]
 async fn answer(state: &mut AgentState) -> Result<()> {
-    let client = LLMClient::openai("gpt-4o");
+    let client = LLM::openai("gpt-4o");
     let msg = Message::user(&state.query);
     state.response = client.chat(vec![msg]).await?.content;
     Ok(())
@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
 }`
 
 const heroPython = `from flowgentra_ai.graph import StateGraph, END
-from flowgentra_ai.llm import LLMConfig, LLMClient, Message
+from flowgentra_ai.llm import LLMConfig, LLM, Message
 from typing import TypedDict
 
 class AgentState(TypedDict):
@@ -46,7 +46,7 @@ class AgentState(TypedDict):
     response: str
 
 config = LLMConfig(provider="openai", model="gpt-4o")
-client = LLMClient.from_config(config)
+client = LLM.from_config(config)
 
 def answer(state: AgentState) -> AgentState:
     msg = Message.user(state["query"])

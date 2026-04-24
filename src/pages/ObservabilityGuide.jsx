@@ -25,7 +25,7 @@ export default function ObservabilityGuide() {
           <li><strong style={{ color: '#e6edf3' }}>Structured logging</strong> — per-node span logs with timing</li>
           <li><strong style={{ color: '#e6edf3' }}>ExecutionTracer</strong> — programmatic event capture and inspection</li>
           <li><strong style={{ color: '#e6edf3' }}>Graph visualization</strong> — Mermaid flowcharts and Graphviz DOT export</li>
-          <li><strong style={{ color: '#e6edf3' }}>Token tracking</strong> — built into <code style={inlineCode}>LLMClient.chat_with_usage()</code></li>
+          <li><strong style={{ color: '#e6edf3' }}>Token tracking</strong> — built into <code style={inlineCode}>LLM.chat_with_usage()</code></li>
           <li><strong style={{ color: '#e6edf3' }}>Cost estimation</strong> — per-model pricing via <code style={inlineCode}>TokenUsage.estimated_cost()</code></li>
         </ul>
       </Section>
@@ -186,9 +186,9 @@ if let Some(u) = usage {
         println!("Estimated cost: ${'{'}:.6{'}'}", cost);
     }
 }`}
-          python={`from flowgentra_ai.llm import LLMClient, LLMConfig, Message
+          python={`from flowgentra_ai.llm import LLM, LLMConfig, Message
 
-client = LLMClient.from_config(LLMConfig(provider="openai", model="gpt-4o"))
+client = LLM.from_config(LLMConfig(provider="openai", model="gpt-4o"))
 
 response, usage = client.chat_with_usage([
     Message.system("You are a helpful assistant."),

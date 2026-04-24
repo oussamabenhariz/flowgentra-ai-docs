@@ -278,7 +278,7 @@ asyncio.run(main())`,
     title: 'LLM Streaming Response',
     description: 'Stream tokens from the LLM as they arrive instead of waiting for the full response. Works with all providers that support streaming.',
     rust: `use flowgentra_ai::core::llm::{
-    LLMConfig, LLMProvider, LLMClient, Message, create_llm_client
+    LLMConfig, LLMProvider, LLM, Message, create_llm
 };
 
 #[tokio::main]
@@ -289,7 +289,7 @@ async fn main() -> flowgentra_ai::core::error::Result<()> {
         std::env::var("ANTHROPIC_API_KEY").unwrap(),
     ).with_temperature(0.7);
 
-    let client = create_llm_client(&config)?;
+    let client = create_llm(&config)?;
 
     let messages = vec![
         Message::system("You are a creative writer."),
@@ -307,7 +307,7 @@ async fn main() -> flowgentra_ai::core::error::Result<()> {
     println!();
     Ok(())
 }`,
-    python: `from flowgentra_ai.llm import LLMClient, LLMConfig, Message
+    python: `from flowgentra_ai.llm import LLM, LLMConfig, Message
 import asyncio
 
 async def stream_response():
@@ -317,7 +317,7 @@ async def stream_response():
         api_key="\${ANTHROPIC_API_KEY}",
         temperature=0.7,
     )
-    client = LLMClient(config)
+    client = LLM(config)
 
     messages = [
         Message(role="system",
@@ -357,7 +357,7 @@ async fn main() -> flowgentra_ai::core::error::Result<()> {
         std::env::var("OPENAI_API_KEY").unwrap(),
     ).with_response_format(ResponseFormat::Json);
 
-    let client = create_llm_client(&config)?;
+    let client = create_llm(&config)?;
 
     let response = client.chat_structured(vec![
         Message::system("Extract person information from the text as JSON."),
@@ -370,7 +370,7 @@ async fn main() -> flowgentra_ai::core::error::Result<()> {
     // Name: Alice, Age: 30, Job: software engineer
     Ok(())
 }`,
-    python: `from flowgentra_ai.llm import LLMClient, LLMConfig, Message
+    python: `from flowgentra_ai.llm import LLM, LLMConfig, Message
 from flowgentra_ai.types import ResponseFormat
 import json
 
@@ -380,7 +380,7 @@ config = LLMConfig(
     api_key="\${OPENAI_API_KEY}",
     response_format=ResponseFormat.Json,  # forces JSON output
 )
-client = LLMClient(config)
+client = LLM(config)
 
 msg = client.call([
     Message(role="system",
@@ -588,7 +588,7 @@ pub async fn answer_with_context(state: DynState) -> Result<DynState> {
     RecursiveCharacterTextSplitter,
     Document
 )
-from flowgentra_ai.llm import LLMClient, LLMConfig, Message
+from flowgentra_ai.llm import LLM, LLMConfig, Message
 import asyncio
 
 async def build_rag_pipeline(docs_text: str, query: str):
@@ -613,7 +613,7 @@ async def build_rag_pipeline(docs_text: str, query: str):
     # 4. Generate answer with context
     config = LLMConfig(provider="openai", model="gpt-4o-mini",
                        api_key="\${OPENAI_API_KEY}")
-    client = LLMClient(config)
+    client = LLM(config)
 
     answer = client.call([
         Message(role="system",

@@ -84,7 +84,7 @@ pip install flowgentra-ai`} />
             </p>
             <CodeBlock forceLang="bash" python={`# Correct — submodule imports
 from flowgentra_ai.graph import StateGraph, END
-from flowgentra_ai.llm import LLMConfig, LLMClient, Message
+from flowgentra_ai.llm import LLMConfig, LLM, Message
 from flowgentra_ai.agent import Agent
 from flowgentra_ai.memory import ConversationMemory, FileCheckpointer
 from flowgentra_ai.tools import ToolRegistry, CalculatorTool

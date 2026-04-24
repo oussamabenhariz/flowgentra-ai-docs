@@ -456,11 +456,11 @@ for r in results:
         </p>
         <CodeBlock
           rust={`use flowgentra_ai::{StateGraph, DynState};
-use flowgentra_ai::llm::{LLMConfig, LLMClient, Message};
+use flowgentra_ai::llm::{LLMConfig, LLM, Message};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let client = LLMClient::from_config(LLMConfig::openai("gpt-4", "sk-..."));
+    let client = LLM::from_config(LLMConfig::openai("gpt-4", "sk-..."));
     let retriever = /* ... setup retriever ... */;
 
     let graph = StateGraph::builder()
@@ -509,11 +509,11 @@ async fn main() -> Result<()> {
     Ok(())
 }`}
           python={`from flowgentra_ai.graph import StateGraph, END
-from flowgentra_ai.llm import LLMConfig, LLMClient, Message
+from flowgentra_ai.llm import LLMConfig, LLM, Message
 from flowgentra_ai import State
 
 # Set up LLM and retriever
-client = LLMClient.from_config(LLMConfig("openai", "gpt-4", api_key="sk-..."))
+client = LLM.from_config(LLMConfig("openai", "gpt-4", api_key="sk-..."))
 # retriever = ... (from previous steps)
 
 def retrieve_node(state):

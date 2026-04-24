@@ -95,10 +95,10 @@ export const guidesData = {
     guides: [
       {
         id: 'llm-client',
-        title: 'LLM Client Guide',
+        title: 'LLM Guide',
         difficulty: 'intermediate',
         readTime: '15 min',
-        description: 'Configure and use LLM clients for 7 different providers',
+        description: 'Configure and use LLMs for 7 different providers',
         file: 'llm-client.md',
         related: ['configuration'],
       },

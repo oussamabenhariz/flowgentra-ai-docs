@@ -197,7 +197,7 @@ print(result["summary"])`,
     summary: 'The primary production API. Load a fully configured agent from YAML — handlers are auto-discovered, no manual wiring.',
     rust: {
       signature: 'from_config_path(config_path: &str) -> Result<Agent>',
-      description: 'Top-level convenience function (in `prelude`). Reads the YAML file, validates the graph, and wires all handlers discovered via `#[register_handler]`. LLM client is created from the `llm:` block. Prefer this over `Agent::from_config`.',
+      description: 'Top-level convenience function (in `prelude`). Reads the YAML file, validates the graph, and wires all handlers discovered via `#[register_handler]`. LLM is created from the `llm:` block. Prefer this over `Agent::from_config`.',
       params: [
         { name: 'config_path', type: '&str', description: 'Path to the agent config YAML file.' },
       ],
@@ -422,7 +422,7 @@ InMemoryConversationMemory::new()
     .with_summarize_threshold(4000)
 
 TokenBufferMemory::new(max_tokens)
-SummaryMemory::new(llm_client, config)
+SummaryMemory::new(llm, config)
 
 // Agent wiring
 agent.with_checkpointer(Arc::new(checkpointer))
@@ -520,141 +520,201 @@ asyncio.run(multi_turn())
     id: 'predefined-agents',
     topic: 'agents',
     name: 'Predefined Agent Types',
-    summary: 'High-level agent presets — ZeroShotReAct, FewShotReAct, Conversational, and MemoryAwareAgent. Build agents in a few lines without defining a graph.',
+    summary: 'Seven production-ready agent presets — ZeroShotReAct, FewShotReAct, Conversational, ToolCalling, StructuredChatZeroShotReAct, SelfAskWithSearch, ReactDocstore. Each is a compiled StateGraph. No graph wiring required.',
     rust: {
-      signature: `AgentBuilder::new(AgentType::ZeroShotReAct)
-    .with_llm_config("gpt-4")
-    .with_tool(ToolSpec::new("search", "Search the web"))
-    .build()?
+      signature: `// All 7 types — pick one
+AgentBuilder::new(AgentType::ZeroShotReAct)           // <action> tag loop
+AgentBuilder::new(AgentType::FewShotReAct)            // <action> tag + few-shot examples
+AgentBuilder::new(AgentType::Conversational)          // single-node, history injected
+AgentBuilder::new(AgentType::ToolCalling)             // chat_with_tools() + response.tool_calls
+AgentBuilder::new(AgentType::StructuredChatZeroShotReAct) // JSON blob actions
+AgentBuilder::new(AgentType::SelfAskWithSearch)       // Follow up / Intermediate answer loop
+AgentBuilder::new(AgentType::ReactDocstore)           // Search[q] / Lookup[t] / Finish[a]
 
-AgentBuilder::new(AgentType::Conversational)
-    .with_memory_steps(10)
-    .with_system_prompt("You are a helpful assistant")
-    .build()?`,
-      description: 'Three built-in agent personalities. All follow the ReAct (Reason + Act) paradigm. `ZeroShotReAct` is general-purpose; `FewShotReAct` adds example demonstrations; `Conversational` focuses on multi-turn dialogue with memory.',
+// Common builder chain (same for all types)
+AgentBuilder::new(AgentType::ZeroShotReAct)
+    .with_name("my-agent")
+    .with_llm_config("gpt-4o")        // or with_llm(LLMConfig)
+    .with_tool(ToolSpec::new("search", "Search the web")
+        .with_parameter("query", "string")
+        .required("query"))
+    .with_tool_executor(|name, args| dispatch(name, args))
+    .with_temperature(0.2)
+    .with_max_tokens(4096)
+    .with_retries(2)
+    .build_graph()?                   // → GraphBasedAgent`,
+      description: 'Seven built-in agent types, each compiled to a `StateGraph<DynState>`. **ZeroShotReAct / FewShotReAct** use `AgentReasoningNode` and parse `<action>` / `<answer>` text tags. **Conversational** is a single `ConversationalNode` that injects conversation history. **ToolCalling** uses `ToolCallingNode` which calls `chat_with_tools()` and reads `response.tool_calls`. **StructuredChatZeroShotReAct** uses `StructuredChatNode` parsing JSON blobs with `"action"/"action_input"` keys. **SelfAskWithSearch** uses `SelfAskNode` accumulating a scratchpad of Follow-up/Intermediate-answer pairs. **ReactDocstore** uses `DocstoreNode` parsing `Action: Search[q]`, `Action: Lookup[t]`, `Action: Finish[a]`.',
       params: [
-        { name: 'AgentType::ZeroShotReAct', type: 'AgentType', description: 'General reasoning + tool use. No example demonstrations needed.' },
-        { name: 'AgentType::FewShotReAct', type: 'AgentType', description: 'ReAct with example traces for better few-shot performance.' },
-        { name: 'AgentType::Conversational', type: 'AgentType', description: 'Multi-turn chat agent with built-in memory.' },
+        { name: 'AgentType::ZeroShotReAct', type: 'AgentType', description: 'General-purpose ReAct. Uses <action>tool(args)</action> and <answer>…</answer> tags. Works with any text model.' },
+        { name: 'AgentType::FewShotReAct', type: 'AgentType', description: 'Same graph as ZeroShotReAct but system prompt includes worked examples. Best for specialized domains.' },
+        { name: 'AgentType::Conversational', type: 'AgentType', description: 'Single-node: ConversationalNode injects conversation_history from state. No tool loop.' },
+        { name: 'AgentType::ToolCalling', type: 'AgentType', description: 'Native function calling via chat_with_tools(). ToolSpec → JSON Schema ToolDefinition. Reads response.tool_calls; stores tc_call_id for proper tool_result messages.' },
+        { name: 'AgentType::StructuredChatZeroShotReAct', type: 'AgentType', description: 'JSON blob actions: {"action":"tool","action_input":"…"}. Final answer: {"action":"Final Answer","action_input":"…"}. parse_structured_action() handles extraction.' },
+        { name: 'AgentType::SelfAskWithSearch', type: 'AgentType', description: 'Requires "search" tool. Decomposes questions via Follow up: / Intermediate answer: pairs. Built-in 4 few-shot examples. parse_self_ask_response() detects FollowUp or FinalAnswer.' },
+        { name: 'AgentType::ReactDocstore', type: 'AgentType', description: 'Requires "search" and "lookup" tools. Parses Action: Search[q], Action: Lookup[t], Action: Finish[a]. Scratchpad accumulates Thought/Action/Observation blocks.' },
+        { name: '.with_llm_config(model: &str)', type: 'fn', description: 'Model name — provider auto-resolved: gpt-*/o1/o3 → OpenAI, claude-* → Anthropic, mistral-* → Mistral, llama-*/mixtral-* → Groq.' },
+        { name: '.with_llm(LLMConfig)', type: 'fn', description: 'Full LLMConfig (provider, model, api_key, temperature, max_tokens). Takes precedence over with_llm_config.' },
+        { name: '.with_tool_executor(fn)', type: 'fn', description: 'Closure (tool_name: &str, args: &str) → String. Called by ToolExecutorNode for every tool dispatch.' },
+        { name: '.with_tool(ToolSpec)', type: 'fn', description: 'ToolSpec::new(name, desc).with_parameter(name, type).required(name).' },
+        { name: '.with_memory_steps(n)', type: 'fn', description: 'Enable conversation history; retain last n turns. Used by Conversational.' },
+        { name: '.build_graph()', type: '→ GraphBasedAgent', description: 'Compile and return the concrete GraphBasedAgent. Call .execute_input(str).await? on it.' },
       ],
-      returns: 'Box<dyn Agent>',
+      returns: 'GraphBasedAgent (build_graph) | Box<dyn Agent> (build)',
       example: `use flowgentra_ai::core::agents::{AgentBuilder, AgentType, ToolSpec};
 
-let search_tool = ToolSpec::new("search", "Search the web for information")
-    .with_parameter("query", "string")
-    .required("query");
+// ── ZeroShotReAct ────────────────────────────────────────────────────────────
+let search = ToolSpec::new("web_search", "Search the web")
+    .with_parameter("query", "string").required("query");
+let calc = ToolSpec::new("calculator", "Evaluate math")
+    .with_parameter("expression", "string").required("expression");
 
-let calc_tool = ToolSpec::new("calculator", "Perform math calculations")
-    .with_parameter("expression", "string")
-    .required("expression");
-
-// Zero-shot ReAct agent
-let mut agent = AgentBuilder::new(AgentType::ZeroShotReAct)
+let agent = AgentBuilder::new(AgentType::ZeroShotReAct)
     .with_llm_config("gpt-4o")
-    .with_tool(search_tool)
-    .with_tool(calc_tool)
-    .build()?;
+    .with_tool(search).with_tool(calc)
+    .with_tool_executor(|name, args| match name {
+        "web_search" => web_search(args),
+        "calculator" => calc_eval(args),
+        _ => "unknown".to_string(),
+    })
+    .build_graph()?;
+let answer = agent.execute_input("Population of France ÷ 1000?").await?;
 
-// Conversational agent with 10-message memory window
-let mut conv_agent = AgentBuilder::new(AgentType::Conversational)
-    .with_memory_steps(10)
-    .with_system_prompt("You are a friendly assistant.")
-    .build()?;`,
+// ── ToolCalling (native function calling) ────────────────────────────────────
+let weather = ToolSpec::new("get_weather", "Get weather")
+    .with_parameter("location", "string").required("location");
+
+let tc_agent = AgentBuilder::new(AgentType::ToolCalling)
+    .with_llm_config("gpt-4o")
+    .with_tool(weather)
+    .with_tool_executor(|_, args| format!("72°F, sunny — {}", args))
+    .build_graph()?;
+
+// ── SelfAskWithSearch ─────────────────────────────────────────────────────────
+let sa_agent = AgentBuilder::new(AgentType::SelfAskWithSearch)
+    .with_llm_config("gpt-4o")
+    .with_tool(ToolSpec::new("search", "Search Wikipedia")
+        .with_parameter("query", "string").required("query"))
+    .with_tool_executor(|_, q| wikipedia_search(q))
+    .build_graph()?;
+let ans = sa_agent.execute_input("Who was the maternal grandfather of George Washington?").await?;
+// → "Joseph Ball"
+
+// ── ReactDocstore ─────────────────────────────────────────────────────────────
+let rd_agent = AgentBuilder::new(AgentType::ReactDocstore)
+    .with_llm_config("gpt-4o")
+    .with_tool(ToolSpec::new("search", "Find doc").with_parameter("query","string").required("query"))
+    .with_tool(ToolSpec::new("lookup", "Lookup term").with_parameter("term","string").required("term"))
+    .with_tool_executor(|name, args| if name == "search" { ds.search(args) } else { ds.lookup(args) })
+    .build_graph()?;`,
     },
     python: {
-      signature: `# ── Way 1: Agent.create() — model name string, quick setup ──────────────────
-from flowgentra_ai.agent import Agent
+      signature: `# ── Typed constructors (preferred) ───────────────────────────────────────────
+from flowgentra_ai.agent import ZeroShotReAct, FewShotReAct, Conversational, ToolCalling, StructuredChat, SelfAskWithSearch, ReactDocstore
+from flowgentra_ai.llm import LLM
 
-agent = Agent.create(
-    agent_type="zero_shot_react",   # or "few_shot_react" | "conversational"
-    model="gpt-4o",                 # model name string
-    memory_steps=10,
-)
-result = agent.run_with_input("What is 42 × 1_000_000?")  # → {"result": str}
+llm = LLM(provider="openai", model="gpt-4o")
+agent = ZeroShotReAct(name="my-agent", llm=llm, retries=2)  # → GraphBasedAgent-like
+result = agent.execute_input("Your question")               # → str
 
-# ── Way 2: AgentBuilder → GraphBasedAgent — full builder API ─────────────────
+# ── AgentBuilder (for advanced configuration) ────────────────────────────────
 from flowgentra_ai.agent import AgentBuilder, AgentType, ToolSpec
 
-builder = AgentBuilder(AgentType.zero_shot_react())
-builder.with_name("my_agent")
-builder.with_llm_config("gpt-4o")
-builder.with_system_prompt("You are helpful.")
-builder.with_tool(tool_spec)        # ToolSpec objects
-builder.with_memory_steps(10)
-builder.with_temperature(0.7)
-builder.with_max_tokens(1024)
-builder.with_retries(3)
-agent = builder.build_graph()       # → GraphBasedAgent
-result = agent.execute_input("Hello")  # → str
-
-# ── Way 3: Agent.from_config_path — fully YAML-driven ────────────────────────
-agent = Agent.from_config_path("config.yaml")
-state = agent.run()
-state = agent.run_with_thread("thread_id")`,
-      description: 'Three ways to build a predefined agent (`zero_shot_react`, `few_shot_react`, `conversational`). **Way 1** (`Agent.create`) takes a model name string and returns an `Agent` — call `run_with_input(str)` on it. **Way 2** (`AgentBuilder`) exposes the full builder API with temperature, tools, retries, etc. — call `build_graph()` then `execute_input(str)`. **Way 3** (`Agent.from_config_path`) is fully YAML-driven — call `run()` or `run_with_thread(id)`.',
+agent = (
+    AgentBuilder(AgentType.zero_shot_react(), llm)
+    .with_name("my-agent")
+    .with_tool(ToolSpec("search", "Search the web"))
+    .with_temperature(0.2)
+    .with_retries(2)
+    .build_graph()
+)`,
+      description: 'Seven built-in agent presets, each compiled to a StateGraph. Use the typed constructors (ZeroShotReAct, FewShotReAct, etc.) for the simplest API — pass an LLM directly. Use AgentBuilder for advanced configuration (temperature, custom params). The type determines which StateGraph is compiled.',
       params: [
-        { name: 'Agent.create(agent_type, model?, memory_steps?)', type: 'classmethod → Agent', description: 'agent_type: "zero_shot_react" | "few_shot_react" | "conversational". model: model name string (default "gpt-4"). Returns Agent — call run_with_input(str).' },
-        { name: 'agent.run_with_input(str)', type: '→ dict', description: 'Run Agent created via Agent.create(). Returns {"result": str}.' },
-        { name: 'AgentType.zero_shot_react()', type: '→ AgentType', description: 'General-purpose ReAct (Reason+Act). No example demonstrations.' },
-        { name: 'AgentType.few_shot_react()', type: '→ AgentType', description: 'ReAct with example traces for better few-shot performance.' },
-        { name: 'AgentType.conversational()', type: '→ AgentType', description: 'Multi-turn chat agent with built-in memory.' },
-        { name: 'builder.with_llm_config(model)', type: 'fn', description: 'Set model name string for AgentBuilder.' },
-        { name: 'builder.with_temperature(f) / with_max_tokens(n)', type: 'fn', description: 'Fine-tune LLM parameters (AgentBuilder only).' },
-        { name: 'builder.with_tool(ToolSpec)', type: 'fn', description: 'Add a tool. ToolSpec(name, desc) + .add_parameter(name, type) + .set_required(name).' },
-        { name: 'builder.with_memory_steps(n)', type: 'fn', description: 'Conversation memory window (number of turns to retain).' },
-        { name: 'builder.with_retries(n)', type: 'fn', description: 'Retry count on node failure.' },
-        { name: 'builder.build_graph()', type: '→ GraphBasedAgent', description: 'Compile AgentBuilder. Raises on misconfiguration.' },
-        { name: 'graph_agent.execute_input(str)', type: '→ str', description: 'Run GraphBasedAgent with text input, returns text response.' },
-        { name: 'agent.run() / run_with_thread(id)', type: '→ dict', description: 'Execute config-based Agent (Way 3). run_with_thread enables persistent memory.' },
+        { name: 'ZeroShotReAct(name, llm, ...)', type: 'class', description: 'General ReAct: AgentReasoningNode parses <action>…</action> tags. Terminates on <answer>…</answer>.' },
+        { name: 'FewShotReAct(name, llm, system_prompt, ...)', type: 'class', description: 'Same graph as ZeroShot; pass examples via system_prompt.' },
+        { name: 'Conversational(name, llm, ...)', type: 'class', description: 'ConversationalNode: injects conversation_history from state. Single-node, no tool loop.' },
+        { name: 'ToolCalling(name, llm, ...)', type: 'class', description: 'ToolCallingNode: passes ToolSpec → JSON-Schema ToolDefinition to chat_with_tools().' },
+        { name: 'StructuredChat(name, llm, ...)', type: 'class', description: 'StructuredChatNode: parses JSON blob {"action":…,"action_input":…}. Final answer on "Final Answer" action.' },
+        { name: 'SelfAskWithSearch(name, llm, ...)', type: 'class', description: 'SelfAskNode: requires "search" tool. Decomposes via Follow up / Intermediate answer pairs.' },
+        { name: 'ReactDocstore(name, llm, ...)', type: 'class', description: 'DocstoreNode: requires "search" and "lookup" tools. Parses Action: Search[q] / Lookup[t] / Finish[a].' },
+        { name: 'llm', type: 'LLM', description: 'LLM instance (provider + model). Create with LLM(provider="openai", model="gpt-4o").' },
+        { name: 'tools', type: 'List[ToolSpec]', description: 'List of ToolSpec objects. ToolSpec(name, desc) then .add_parameter(name, type) / .set_required(name).' },
+        { name: 'memory_steps', type: 'int | None', description: 'Keep last n conversation turns in state. Primarily used by Conversational.' },
+        { name: '.build_graph()', type: '→ GraphBasedAgent', description: 'AgentBuilder only: compile and return GraphBasedAgent.' },
+        { name: 'agent.execute_input(str)', type: '→ str', description: 'Run agent. Typed constructors expose this directly; so does GraphBasedAgent from AgentBuilder.' },
       ],
-      returns: 'Agent (Way 1 & 3) | GraphBasedAgent (Way 2)',
-      example: `import os
-from flowgentra_ai.agent import Agent, AgentBuilder, AgentType, ToolSpec
+      returns: 'GraphBasedAgent',
+      example: `from flowgentra_ai.agent import ZeroShotReAct, FewShotReAct, ToolCalling, StructuredChat, SelfAskWithSearch, ReactDocstore, ToolSpec
+from flowgentra_ai.llm import LLM
 
-# ── Way 1: Agent.create — model name string, simplest API ───────────────────
-agent = Agent.create(
-    agent_type="zero_shot_react",
-    model="claude-3-5-haiku-20241022",
-    memory_steps=10,
-)
-result = agent.run_with_input("What is 42 × 1_000_000?")
-print(result["result"])
-
-# ── Way 2: AgentBuilder — full builder, tool + retry control ────────────────
-search = ToolSpec("search", "Search the web")
+# ── ZeroShotReAct — typed constructor (preferred) ─────────────────────────────
+llm = LLM(provider="openai", model="gpt-4o")
+search = ToolSpec("web_search", "Search the web")
 search.add_parameter("query", "string")
 search.set_required("query")
 
-builder = AgentBuilder(AgentType.zero_shot_react())
-builder.with_name("research_agent")
-builder.with_llm_config("gpt-4o")
-builder.with_system_prompt("You are a research assistant.")
-builder.with_tool(search)
-builder.with_retries(2)
-graph_agent = builder.build_graph()
+agent = ZeroShotReAct(
+    name="research-agent",
+    llm=llm,
+    tools=[search],
+    retries=2,
+)
+print(agent.execute_input("What is the capital of Japan?"))
 
-print(graph_agent.execute_input("What is the capital of Japan?"))
+# ── FewShotReAct — embed examples in system_prompt ────────────────────────────
+classifier = FewShotReAct(
+    name="classifier",
+    llm=LLM(provider="anthropic", model="claude-opus-4-6"),
+    system_prompt="Example 1: ...\nExample 2: ...",
+    tools=[search],
+    retries=2,
+    memory_steps=10,
+)
 
-# Conversational with memory
-conv = AgentBuilder(AgentType.conversational())
-conv.with_llm_config("gpt-4o-mini")
-conv.with_memory_steps(10)
-conv_agent = conv.build_graph()
-print(conv_agent.execute_input("Hi, I'm Alice."))
-print(conv_agent.execute_input("What's my name?"))  # remembers
+# ── ToolCalling — native function-calling API ─────────────────────────────────
+weather = ToolSpec("get_weather", "Get weather for a location")
+weather.add_parameter("location", "string")
+weather.set_required("location")
 
-# ── Way 3: YAML config ───────────────────────────────────────────────────────
-agent = Agent.from_config_path("agent.yaml")
-state = agent.run_with_thread("session_42")`,
+tc_agent = ToolCalling(
+    name="weather-agent",
+    llm=LLM(provider="openai", model="gpt-4o"),
+    tools=[weather],
+)
+
+# ── StructuredChat — JSON-blob tool actions ───────────────────────────────────
+calc = ToolSpec("calculator", "Evaluate math expression")
+calc.add_parameter("expression", "string")
+calc.set_required("expression")
+
+sc_agent = StructuredChat(
+    name="math-agent",
+    llm=LLM(provider="openai", model="gpt-4o"),
+    tools=[calc],
+)
+print(sc_agent.execute_input("What is 15% of 2847?"))
+
+# ── SelfAskWithSearch — decompose questions ───────────────────────────────────
+sa_agent = SelfAskWithSearch(
+    name="researcher",
+    llm=LLM(provider="openai", model="gpt-4o"),
+)
+print(sa_agent.execute_input("Who was the maternal grandfather of George Washington?"))
+
+# ── ReactDocstore — Search + Lookup loop ──────────────────────────────────────
+rd_agent = ReactDocstore(
+    name="doc-agent",
+    llm=LLM(provider="openai", model="gpt-4o"),
+)
+print(rd_agent.execute_input("What is the elevation range of the High Plains?"))`,
     },
   },
 
-  // ─── LLM CLIENTS ─────────────────────────────────────────────────────────────
+  // ─── LLMS ─────────────────────────────────────────────────────────────
   {
     id: 'llm-clients',
     topic: 'llm',
-    name: 'LLM Clients & Providers',
-    summary: 'Built-in clients for 7 LLM providers, plus CachedLLMClient, FallbackLLMClient, and RetryLLMClient wrappers.',
+    name: 'LLMs & Providers',
+    summary: 'Built-in clients for 7 LLM providers, plus CachedLLM, FallbackLLM, and RetryLLM wrappers.',
     rust: {
       signature: `// Direct construction
 OpenAIClient::new(api_key, model)
@@ -666,10 +726,10 @@ MistralClient::new(api_key, model)
 HuggingFaceClient::new(api_key, model)
 
 // Wrappers
-CachedLLMClient::new(inner)
-FallbackLLMClient::new(vec![primary, backup])
-RetryLLMClient::new(inner, max_retries)`,
-      description: 'All implement the `LLMClient` trait: `chat()`, `chat_stream()`, `chat_with_tools()`, `chat_structured()`. Streaming returns a `tokio::sync::mpsc::Receiver<String>`. Structured output uses `ResponseFormat::Json` or `ResponseFormat::JsonSchema`.',
+CachedLLM::new(inner)
+FallbackLLM::new(vec![primary, backup])
+RetryLLM::new(inner, max_retries)`,
+      description: 'All implement the `LLM` trait: `chat()`, `chat_stream()`, `chat_with_tools()`, `chat_structured()`. Streaming returns a `tokio::sync::mpsc::Receiver<String>`. Structured output uses `ResponseFormat::Json` or `ResponseFormat::JsonSchema`.',
       params: [
         { name: 'chat(messages)', type: 'async fn', description: 'Standard chat completion.' },
         { name: 'chat_stream(messages)', type: 'async fn', description: 'Streaming response via mpsc channel.' },
@@ -684,7 +744,7 @@ use std::sync::Arc;
 // Primary provider with fallback
 let primary = OpenAIClient::new(std::env::var("OPENAI_API_KEY")?, "gpt-4o");
 let backup  = AnthropicClient::new(std::env::var("ANTHROPIC_API_KEY")?, "claude-3-haiku-20240307");
-let client  = FallbackLLMClient::new(vec![Arc::new(primary), Arc::new(backup)]);
+let client  = FallbackLLM::new(vec![Arc::new(primary), Arc::new(backup)]);
 
 // Streaming
 let mut rx = client.chat_stream(vec![
@@ -711,42 +771,42 @@ if let Some(u) = usage {
 }`,
     },
     python: {
-      signature: `from flowgentra_ai.llm import LLMConfig, LLMClient, Message
+      signature: `from flowgentra_ai.llm import LLMConfig, LLM, Message
 
 # Option A — direct constructor (provider + model as positional args)
-client = LLMClient("openai",     "gpt-4o",                         api_key="sk-...")
-client = LLMClient("anthropic",  "claude-3-5-haiku-20241022",      api_key="sk-ant-...")
-client = LLMClient("groq",       "llama3-70b-8192",                api_key="...")
-client = LLMClient("ollama",     "llama3")               # Local — no api_key needed
-client = LLMClient("mistral",    "mistral-large",        api_key="...", temperature=0.3)
+client = LLM("openai",     "gpt-4o",                         api_key="sk-...")
+client = LLM("anthropic",  "claude-3-5-haiku-20241022",      api_key="sk-ant-...")
+client = LLM("groq",       "llama3-70b-8192",                api_key="...")
+client = LLM("ollama",     "llama3")               # Local — no api_key needed
+client = LLM("mistral",    "mistral-large",        api_key="...", temperature=0.3)
 
 # Option B — LLMConfig + from_config (useful when reusing the same config)
 config = LLMConfig("openai", "gpt-4o", api_key="sk-...", temperature=0.7, max_tokens=1000)
-client = LLMClient.from_config(config)
+client = LLM.from_config(config)
 
 # Wrappers via method chaining
 client = client.with_retry(max_retries=3)
 client = client.cached(max_entries=100)
 client = client.with_fallback(backup_client)`,
-      description: 'Two ways to create a client: `LLMClient(provider, model, api_key=...)` directly, or `LLMClient.from_config(LLMConfig(...))` when you want to reuse or mutate the config (e.g. `set_response_format`). No separate provider-specific classes. Wrappers (retry, cache, fallback) chain as methods.',
+      description: 'Two ways to create a client: `LLM(provider, model, api_key=...)` directly, or `LLM.from_config(LLMConfig(...))` when you want to reuse or mutate the config (e.g. `set_response_format`). No separate provider-specific classes. Wrappers (retry, cache, fallback) chain as methods.',
       params: [
         { name: 'LLMConfig(provider, model, api_key?, temperature?, max_tokens?, top_p?)', type: 'config', description: 'Providers: "openai" | "anthropic" | "mistral" | "groq" | "ollama" | "huggingface" | "azure". api_key optional for ollama.' },
-        { name: 'LLMClient.from_config(config)', type: 'classmethod', description: 'Create client from LLMConfig.' },
+        { name: 'LLM.from_config(config)', type: 'classmethod', description: 'Create client from LLMConfig.' },
         { name: 'client.chat(messages)', type: 'fn → Message', description: 'Standard completion.' },
         { name: 'client.chat_with_usage(messages)', type: 'fn → (Message, TokenUsage|None)', description: 'Chat with token count and cost tracking.' },
         { name: 'client.chat_with_tools(messages, tools)', type: 'fn → Message', description: 'Function calling. Check response.has_tool_calls() / response.tool_calls().' },
-        { name: 'client.with_retry(max_retries=3)', type: 'fn → LLMClient', description: 'Wrap with exponential backoff retry.' },
-        { name: 'client.cached(max_entries=100)', type: 'fn → LLMClient', description: 'Wrap with response cache.' },
-        { name: 'client.with_fallback(backup)', type: 'fn → LLMClient', description: 'Falls back to backup client on error.' },
+        { name: 'client.with_retry(max_retries=3)', type: 'fn → LLM', description: 'Wrap with exponential backoff retry.' },
+        { name: 'client.cached(max_entries=100)', type: 'fn → LLM', description: 'Wrap with response cache.' },
+        { name: 'client.with_fallback(backup)', type: 'fn → LLM', description: 'Falls back to backup client on error.' },
         { name: 'config.set_response_format(fmt)', type: 'fn', description: 'ResponseFormat.json() or ResponseFormat.json_schema(name, schema) for structured output.' },
       ],
       returns: 'Message | (Message, TokenUsage | None) depending on method',
       example: `import os
-from flowgentra_ai.llm import LLMConfig, LLMClient, Message, ToolDefinition
+from flowgentra_ai.llm import LLMConfig, LLM, Message, ToolDefinition
 from flowgentra_ai.types import ResponseFormat
 
 # Direct constructor — shortest form
-client = LLMClient(
+client = LLM(
     "anthropic",
     "claude-3-5-haiku-20241022",
     api_key=os.environ["ANTHROPIC_API_KEY"],
@@ -756,7 +816,7 @@ client = LLMClient(
 # Or via LLMConfig when you need set_response_format()
 config = LLMConfig("anthropic", "claude-3-5-haiku-20241022",
                    api_key=os.environ["ANTHROPIC_API_KEY"])
-client = LLMClient.from_config(config)
+client = LLM.from_config(config)
 
 # Standard chat
 response = client.chat([
@@ -793,7 +853,7 @@ if response.has_tool_calls():
         print(tc.name, tc.arguments)
 
 # Production setup: retry + cache + fallback — all via method chaining
-backup = LLMClient.from_config(LLMConfig("openai", "gpt-4o-mini", api_key=os.environ["OPENAI_API_KEY"]))
+backup = LLM.from_config(LLMConfig("openai", "gpt-4o-mini", api_key=os.environ["OPENAI_API_KEY"]))
 production_client = client.with_retry(max_retries=3).cached(max_entries=500).with_fallback(backup)`,
     },
   },
@@ -805,7 +865,7 @@ production_client = client.with_retry(max_retries=3).cached(max_entries=500).wit
     name: 'Supervisor / Multi-Agent',
     summary: 'Orchestrate multiple agents as children of a Supervisor. The supervisor routes tasks, aggregates results, and can run children in parallel.',
     rust: {
-      signature: `Supervisor::new(name, strategy, llm_client)
+      signature: `Supervisor::new(name, strategy, llm)
     .add_child("worker_a", agent_a)
     .add_child("worker_b", agent_b)`,
       description: 'Supervisor is itself a `PluggableNode`. Add it to a StateGraph as a node. Strategies: `Sequential`, `Parallel`, `LLMRouted` (LLM decides which child to call).',
@@ -824,7 +884,7 @@ let writer     = build_writer_agent()?;
 let supervisor = Supervisor::new(
     "editorial_supervisor",
     OrchestrationStrategy::Sequential,
-    llm_client.clone(),
+    llm.clone(),
 )
 .add_child("researcher", Box::new(researcher))
 .add_child("writer",     Box::new(writer));
@@ -1252,7 +1312,7 @@ token_memory = TokenBufferMemory(max_tokens=2000, llm_for_count="gpt-4")
 
 # Summarization memory (compresses old messages)
 summary_memory = SummaryMemory(
-    llm=LLMClient(LLMConfig("gpt-4")),
+    llm=LLM(provider="openai", model="gpt-4"),
     summary_prompt="Summarize the conversation so far:"
 )`,
     },
@@ -1344,7 +1404,7 @@ supervisor = Supervisor(
 
 # Planner-based orchestration
 planner = PlannerNode(
-    llm=LLMClient(LLMConfig("gpt-4")),
+    llm=LLM(provider="openai", model="gpt-4"),
     available_agents=[agent1, agent2, agent3]
 )
 
@@ -1358,48 +1418,391 @@ builder.add_node("supervise", supervisor)`,
     id: 'tool-registry',
     topic: 'tools',
     name: 'Tool Registry & Built-in Tools',
-    summary: 'Register custom tools and use built-in implementations: calculators, web requests, file operations, and search tools.',
+    summary: 'Register tools and dispatch calls by name. with_builtins() pre-registers 13 keyless tools: calculator, file, web_request, duckduckgo_search, wikipedia, json/csv data tools, and file operations.',
     rust: {
-      signature: 'ToolRegistry::new() -> Self',
-      description: 'Central registry for tool definitions and execution. Tools are functions that agents can call.',
+      signature: 'ToolRegistry::with_builtins() -> Self',
+      description: 'Central registry for tool definitions and execution. with_builtins() registers all keyless, non-destructive tools. API-key and subprocess tools must be added manually.',
       params: [],
-      returns: 'Empty tool registry',
-      example: `use flowgentra_ai::tools::{ToolRegistry, ToolDefinition};
+      returns: 'ToolRegistry pre-loaded with 13 built-in tools',
+      example: `use flowgentra_ai::core::tools::ToolRegistry;
+use std::sync::Arc;
 
-let mut registry = ToolRegistry::new();
+// 13 keyless tools registered automatically
+let mut registry = ToolRegistry::with_builtins();
 
-// Register custom tool
-registry.register(ToolDefinition {
-    name: "calculate".to_string(),
-    description: "Calculate mathematical expressions".to_string(),
-    parameters: json_schema_for_calculator(),
-    handler: |args| async move { calculate(args).await },
-})?;`,
+// Add API-key tools manually
+registry.register("tavily", Arc::new(TavilySearchTool::from_env()?))?;
+registry.register("weather", Arc::new(OpenWeatherMapTool::from_env()?))?;
+
+// Call by name
+let result = registry
+    .call_tool("calculator", json!({"expression": "2^10"}))
+    .await?;
+
+// Inspect
+for def in registry.list_definitions() {
+    println!("{}: {}", def.name, def.description);
+}`,
     },
     python: {
-      signature: 'ToolRegistry()',
-      description: 'Register and manage tools that agents can execute. Tools are functions with JSON schemas.',
+      signature: 'ToolRegistry.with_builtins()',
+      description: 'Pre-seeds the registry with all keyless built-in tools. Pass a list or dict to the constructor to build a custom registry instead.',
       params: [],
-      returns: 'Tool registry instance',
-      example: `from flowgentra_ai.tools import ToolRegistry, ToolNode, CalculatorTool
+      returns: 'ToolRegistry with 13 built-in tools',
+      example: `from flowgentra_ai.tools import (
+    ToolRegistry, ToolNode, create_tool_node, check_tools_condition,
+    CalculatorTool, FilesTool, WebRequestTool,
+    DuckDuckGoSearchTool, WikipediaTool,
+    TavilySearchTool, OpenWeatherMapTool,
+)
 
-registry = ToolRegistry()
+# All 13 keyless tools pre-registered
+registry = ToolRegistry.with_builtins()
 
-# Register custom tool
-@registry.register
-def calculate(expression: str) -> float:
-    """Calculate a mathematical expression."""
-    return eval(expression)  # In real code, use safe evaluation
+# Add API-key tools
+registry = ToolRegistry([
+    CalculatorTool(),
+    FilesTool(),
+    WebRequestTool(),
+    DuckDuckGoSearchTool(),
+    TavilySearchTool(),          # reads TAVILY_API_KEY
+    OpenWeatherMapTool(),         # reads OPENWEATHERMAP_API_KEY
+])
 
-# Use built-in tools
-calc_tool = CalculatorTool()
-web_tool = WebRequestTool()
-search_tool = SearchTool()
-files_tool = FilesTool()
+# Wire into a graph
+tool_node = create_tool_node(registry)
+builder.add_node("tools", tool_node)
+builder.add_conditional_edges("agent", check_tools_condition, {
+    "tools": "tools", "__end__": END,
+})
+builder.add_edge("tools", "agent")`,
+    },
+  },
 
-# Add to graph
-tool_node = ToolNode(registry)
-builder.add_node("tools", tool_node)`,
+  // ─── SEARCH TOOLS ─────────────────────────────────────────────────────────────
+  {
+    id: 'search-tools',
+    topic: 'tools',
+    name: 'Search Tools',
+    summary: 'Five web search providers. DuckDuckGoSearchTool is free; Tavily, SerpApi, GoogleSerper, and Brave require API keys. All return {query, results:[{title,url,snippet}], count}.',
+    rust: {
+      signature: 'DuckDuckGoSearchTool::new() / TavilySearchTool::new(api_key)',
+      description: 'All search tools implement the Tool trait and return a uniform results array. API-key tools also expose from_env() constructors.',
+      params: [
+        { name: 'query', type: 'str', description: 'Search query string' },
+        { name: 'max_results', type: 'int (optional)', description: 'Maximum number of results to return (default: 5)' },
+      ],
+      returns: '{ query: str, results: [{title, url, snippet}], count: int }',
+      example: `use flowgentra_ai::core::tools::search::{
+    DuckDuckGoSearchTool, TavilySearchTool,
+    SerpApiSearchTool, GoogleSerperTool, BraveSearchTool,
+};
+
+// Free — no key
+let ddg = DuckDuckGoSearchTool::new();
+let result = ddg.call(json!({"query": "Rust 2024 edition", "max_results": 5})).await?;
+
+// API-key tools — from env or explicit
+let tavily = TavilySearchTool::from_env()?;  // TAVILY_API_KEY
+let brave  = BraveSearchTool::new("YOUR_BRAVE_KEY");`,
+    },
+    python: {
+      signature: 'DuckDuckGoSearchTool() / TavilySearchTool(api_key=None)',
+      description: 'All five search tools share the same call interface. When api_key is omitted, the tool reads its env var.',
+      params: [
+        { name: 'query', type: 'str', description: 'Search query string' },
+        { name: 'max_results', type: 'int (optional)', description: 'Maximum number of results (default: 5)' },
+      ],
+      returns: '{ query, results: [{title, url, snippet}], count }',
+      example: `from flowgentra_ai.tools import (
+    DuckDuckGoSearchTool, TavilySearchTool,
+    SerpApiSearchTool, GoogleSerperTool, BraveSearchTool,
+)
+
+# Free — no key
+ddg = DuckDuckGoSearchTool()
+result = ddg.call({"query": "Python async patterns", "max_results": 5})
+
+# API-key tools
+tavily = TavilySearchTool()             # TAVILY_API_KEY
+serp   = SerpApiSearchTool()            # SERPAPI_API_KEY
+serper = GoogleSerperTool()             # SERPER_API_KEY
+brave  = BraveSearchTool(api_key="...") # or BRAVE_API_KEY
+
+for r in result["results"]:
+    print(r["title"], "—", r["url"])`,
+    },
+  },
+
+  // ─── KNOWLEDGE TOOLS ──────────────────────────────────────────────────────────
+  {
+    id: 'knowledge-tools',
+    topic: 'tools',
+    name: 'Knowledge Tools',
+    summary: 'Wikipedia, ArXiv, PubMed, and Wolfram Alpha. Wikipedia/ArXiv/PubMed are free; Wolfram Alpha requires WOLFRAM_ALPHA_APPID.',
+    rust: {
+      signature: 'WikipediaTool::new() / WolframAlphaTool::new(appid)',
+      description: 'Four tools for encyclopedic and scientific knowledge. All implement the Tool trait.',
+      params: [],
+      returns: 'Structured JSON — see each tool description',
+      example: `use flowgentra_ai::core::tools::knowledge::{
+    WikipediaTool, ArxivTool, PubMedTool, WolframAlphaTool,
+};
+
+let wiki   = WikipediaTool::new();
+let arxiv  = ArxivTool::new();
+let pubmed = PubMedTool::new();
+let wolfram = WolframAlphaTool::from_env()?;  // WOLFRAM_ALPHA_APPID
+
+let summary = wiki.call(json!({"title": "Transformer (machine learning)"})).await?;
+// {"title": "...", "extract": "...", "url": "..."}
+
+let papers = arxiv.call(json!({"query": "attention is all you need", "max_results": 3})).await?;
+// {"results": [{"id": "...", "title": "...", "summary": "...", "published": "..."}]}`,
+    },
+    python: {
+      signature: 'WikipediaTool() / WolframAlphaTool(api_key=None)',
+      description: 'Knowledge tools for agents that need encyclopedic or scientific data.',
+      params: [],
+      returns: 'Structured JSON per tool',
+      example: `from flowgentra_ai.tools import WikipediaTool, ArxivTool, PubMedTool, WolframAlphaTool
+
+wiki   = WikipediaTool()
+arxiv  = ArxivTool()
+pubmed = PubMedTool()
+wolfram = WolframAlphaTool()  # reads WOLFRAM_ALPHA_APPID
+
+result = wiki.call({"title": "Attention (machine learning)"})
+print(result["extract"][:200])
+
+papers = arxiv.call({"query": "RLHF language models", "max_results": 5})
+for p in papers["results"]:
+    print(p["title"], p["published"])`,
+    },
+  },
+
+  // ─── CODE EXEC TOOLS ──────────────────────────────────────────────────────────
+  {
+    id: 'code-exec-tools',
+    topic: 'tools',
+    name: 'Code Execution Tools',
+    summary: 'Execute Python, Node.js, or shell commands in a subprocess. All return {output, error, exit_code}. Timeouts kill the child process automatically.',
+    rust: {
+      signature: 'PythonReplTool::new() / ShellTool::new(allowed, timeout_secs)',
+      description: 'Subprocess execution with tokio::process::Command, async stdin write, and tokio::time::timeout for kill-on-timeout.',
+      params: [
+        { name: 'code / command', type: 'str', description: 'Code or shell command to execute' },
+        { name: 'timeout_secs', type: 'u64 (constructor)', description: 'Kill timeout in seconds (default: 30)' },
+      ],
+      returns: '{ output: str, error: str, exit_code: i32 }',
+      example: `use flowgentra_ai::core::tools::code_exec::{
+    PythonReplTool, NodeJsReplTool, ShellTool,
+};
+
+let py   = PythonReplTool::new();
+let node = NodeJsReplTool::new();
+
+// Restricted shell — only listed commands allowed
+let shell = ShellTool::new(vec!["ls".into(), "cat".into(), "echo".into()], 30);
+
+// Unrestricted — explicit opt-in required
+let shell_unr = ShellTool::unrestricted(30);
+
+let r = py.call(json!({"code": "print(sum(range(100)))"})).await?;
+// {"output": "4950", "error": "", "exit_code": 0}`,
+    },
+    python: {
+      signature: 'PythonReplTool() / ShellTool(allowed_commands=[], timeout_secs=30)',
+      description: 'Code execution tools. ShellTool blocks all commands by default unless you pass an allowlist or call unrestricted().',
+      params: [
+        { name: 'code', type: 'str', description: 'Python or JavaScript source code' },
+        { name: 'command', type: 'str (ShellTool)', description: 'Shell command to run' },
+      ],
+      returns: '{ output, error, exit_code }',
+      example: `from flowgentra_ai.tools import PythonReplTool, NodeJsReplTool, ShellTool
+
+py   = PythonReplTool()
+node = NodeJsReplTool()
+shell = ShellTool(allowed_commands=["ls", "cat", "wc"])
+shell_unr = ShellTool.unrestricted()
+
+r = py.call({"code": "import math; print(math.factorial(10))"})
+# {"output": "3628800", "error": "", "exit_code": 0}
+
+r = node.call({"code": "process.stdout.write(String(2**32))"})
+# {"output": "4294967296", "error": "", "exit_code": 0}
+
+r = shell.call({"command": "wc -l README.md"})
+# {"output": "42 README.md", "error": "", "exit_code": 0}`,
+    },
+  },
+
+  // ─── FILE TOOLS ───────────────────────────────────────────────────────────────
+  {
+    id: 'file-tools',
+    topic: 'tools',
+    name: 'Extended File Tools',
+    summary: 'CopyFileTool, DeleteFileTool, MoveFileTool, FileSearchTool — all sandbox-validated to prevent path traversal. Registered in with_builtins().',
+    rust: {
+      signature: 'CopyFileTool::new() / FileSearchTool::new()',
+      description: 'All file tools validate paths against a sandbox root (default: cwd). Path traversal attempts return an error.',
+      params: [],
+      returns: 'JSON confirmation or match list',
+      example: `use flowgentra_ai::core::tools::files_extended::{
+    CopyFileTool, DeleteFileTool, MoveFileTool, FileSearchTool,
+};
+
+let copy   = CopyFileTool::new();
+let delete = DeleteFileTool::new();
+let mv     = MoveFileTool::new();
+let search = FileSearchTool::new();
+
+copy.call(json!({"src": "report.md", "dst": "backup/report.md"})).await?;
+delete.call(json!({"path": "tmp/", "recursive": true})).await?;
+mv.call(json!({"src": "draft.txt", "dst": "final/v1.txt"})).await?;
+
+let hits = search.call(json!({
+    "directory": "src/",
+    "pattern": "TODO|FIXME",
+    "max_results": 100,
+})).await?;`,
+    },
+    python: {
+      signature: 'CopyFileTool() / FileSearchTool()',
+      description: 'Extended file operations beyond the core FilesTool. All paths are sandbox-validated.',
+      params: [],
+      returns: 'JSON confirmation or {matches: [{file, line_number, line_content}]}',
+      example: `from flowgentra_ai.tools import CopyFileTool, DeleteFileTool, MoveFileTool, FileSearchTool
+
+CopyFileTool().call({"src": "report.md", "dst": "backup/report.md"})
+DeleteFileTool().call({"path": "tmp/cache/", "recursive": True})
+MoveFileTool().call({"src": "draft.txt", "dst": "published/v1.txt"})
+
+result = FileSearchTool().call({
+    "directory": "src/",
+    "pattern": r"unwrap\\(\\)",
+    "max_results": 50,
+})
+for hit in result["matches"]:
+    print(f"{hit['file']}:{hit['line_number']}  {hit['line_content'].strip()}")`,
+    },
+  },
+
+  // ─── DATA TOOLS ───────────────────────────────────────────────────────────────
+  {
+    id: 'data-tools',
+    topic: 'tools',
+    name: 'Data Tools',
+    summary: 'Pure in-memory JSON and CSV manipulation — no I/O, no API keys. JsonGetValueTool, JsonListKeysTool, CsvQueryTool. Registered in with_builtins().',
+    rust: {
+      signature: 'JsonGetValueTool::new() / CsvQueryTool::new()',
+      description: 'Three lightweight data tools that operate on string inputs. Ideal for agents that process structured data from prior tool calls.',
+      params: [],
+      returns: 'Extracted value, key list, or filtered rows',
+      example: `use flowgentra_ai::core::tools::data::{JsonGetValueTool, JsonListKeysTool, CsvQueryTool};
+
+let jget  = JsonGetValueTool::new();
+let jkeys = JsonListKeysTool::new();
+let csv   = CsvQueryTool::new();
+
+let v = jget.call(json!({
+    "json": r#"{"user":{"name":"Alice","age":30}}"#,
+    "path": "user.name"
+})).await?;
+// {"value": "Alice", "found": true}
+
+let r = csv.call(json!({
+    "csv": "name,score\\nAlice,95\\nBob,82",
+    "filter": "score=95"
+})).await?;
+// {"rows": [{"name":"Alice","score":"95"}], "count": 1}`,
+    },
+    python: {
+      signature: 'JsonGetValueTool() / CsvQueryTool()',
+      description: 'In-memory data tools. Use to parse and query structured data returned by other tools.',
+      params: [],
+      returns: 'Structured result dict',
+      example: `from flowgentra_ai.tools import JsonGetValueTool, JsonListKeysTool, CsvQueryTool
+
+# Dot-notation JSON path
+result = JsonGetValueTool().call({
+    "json": '{"config": {"model": "gpt-4", "temp": 0.7}}',
+    "path": "config.model"
+})
+# {"value": "gpt-4", "found": true}
+
+# List all keys (depth-limited)
+result = JsonListKeysTool().call({
+    "json": '{"a":1,"b":{"c":2,"d":{"e":3}}}',
+    "depth": 3
+})
+# {"keys": ["a", "b", "b.c", "b.d", "b.d.e"]}
+
+# CSV filter
+result = CsvQueryTool().call({
+    "csv": "city,pop\\nTokyo,14000000\\nOsaka,2700000\\nKyoto,1500000",
+    "filter": "city=Tokyo"
+})
+# {"rows": [{"city":"Tokyo","pop":"14000000"}], "count": 1}`,
+    },
+  },
+
+  // ─── COMMUNICATION TOOLS ──────────────────────────────────────────────────────
+  {
+    id: 'communication-tools',
+    topic: 'tools',
+    name: 'Communication Tools',
+    summary: 'GmailTool (send/list/read) and SlackTool (post_message/list_channels). Both require access tokens via constructor or env var.',
+    rust: {
+      signature: 'GmailTool::new(access_token) / SlackTool::from_env()',
+      description: 'Communication tools for sending and reading messages. Tokens passed explicitly or read from GMAIL_ACCESS_TOKEN / SLACK_BOT_TOKEN.',
+      params: [],
+      returns: 'Operation result as JSON',
+      example: `use flowgentra_ai::core::tools::communication::{GmailTool, SlackTool};
+
+let gmail = GmailTool::from_env()?;   // GMAIL_ACCESS_TOKEN
+let slack = SlackTool::from_env()?;   // SLACK_BOT_TOKEN
+
+gmail.call(json!({
+    "operation": "send",
+    "to": "team@example.com",
+    "subject": "Build passed",
+    "body": "All tests green.",
+})).await?;
+
+slack.call(json!({
+    "operation": "post_message",
+    "channel": "#deployments",
+    "text": ":white_check_mark: v1.2.0 deployed",
+})).await?;`,
+    },
+    python: {
+      signature: 'GmailTool(access_token=None) / SlackTool(bot_token=None)',
+      description: 'Send messages and read inboxes. Tokens read from env when omitted.',
+      params: [
+        { name: 'operation', type: 'str', description: 'Gmail: "send"|"list"|"read". Slack: "post_message"|"list_channels"' },
+      ],
+      returns: 'Operation result as dict',
+      example: `from flowgentra_ai.tools import GmailTool, SlackTool
+
+gmail = GmailTool()  # GMAIL_ACCESS_TOKEN
+slack = SlackTool()  # SLACK_BOT_TOKEN
+
+# Gmail: send
+gmail.call({
+    "operation": "send",
+    "to": "boss@example.com",
+    "subject": "Weekly summary",
+    "body": "Done. See attached.",
+})
+
+# Gmail: read latest
+msgs = gmail.call({"operation": "list", "max_results": 3})
+msg  = gmail.call({"operation": "read", "message_id": msgs["messages"][0]["id"]})
+
+# Slack
+slack.call({"operation": "post_message", "channel": "#alerts", "text": "Done!"})
+channels = slack.call({"operation": "list_channels"})`,
     },
   },
 

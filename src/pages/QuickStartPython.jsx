@@ -94,10 +94,10 @@ state["score"] = 42
       </Section>
 
       <Section id="add-llm" title="Add an LLM Node">
-        <p style={muted}>Connect a real LLM. Flowgentra's <code style={inlineCode}>LLMClient</code> works with all major providers via a unified API.</p>
+        <p style={muted}>Connect a real LLM. Flowgentra's <code style={inlineCode}>LLM</code> works with all major providers via a unified API.</p>
         <CodeBlock python={`import os
 from flowgentra_ai.graph import StateGraph, END
-from flowgentra_ai.llm import LLMConfig, LLMClient, Message
+from flowgentra_ai.llm import LLMConfig, LLM, Message
 from typing import TypedDict
 
 os.environ["OPENAI_API_KEY"] = "sk-..."
@@ -106,9 +106,9 @@ class ChatState(TypedDict):
     user_message: str
     response:     str
 
-# Create a reusable LLM client
+# Create a reusable LLM
 config = LLMConfig(provider="openai", model="gpt-4o")
-client = LLMClient.from_config(config)
+client = LLM.from_config(config)
 
 def call_llm(state: ChatState) -> ChatState:
     messages = [
@@ -148,7 +148,7 @@ config = LLMConfig(provider="groq", model="llama-3.3-70b-versatile", api_key="..
           Real agents have multiple nodes with branching logic. Here's a graph that classifies a question and routes it differently:
         </p>
         <CodeBlock python={`from flowgentra_ai.graph import StateGraph, END
-from flowgentra_ai.llm import LLMConfig, LLMClient, Message
+from flowgentra_ai.llm import LLMConfig, LLM, Message
 from typing import TypedDict
 
 class RouterState(TypedDict):
@@ -157,7 +157,7 @@ class RouterState(TypedDict):
     answer:    str
 
 config = LLMConfig(provider="openai", model="gpt-4o-mini")
-client = LLMClient.from_config(config)
+client = LLM.from_config(config)
 
 def classify(state: RouterState) -> RouterState:
     """Classify the question type."""
@@ -209,10 +209,10 @@ print(f"[{result['category']}] {result['answer'][:80]}...")`} />
 
         <p style={{ ...muted, marginBottom: 8 }}><strong style={{ color: '#e6edf3' }}>handlers.py</strong></p>
         <CodeBlock python={`from flowgentra_ai.agent import register_handler
-from flowgentra_ai.llm import LLMConfig, LLMClient, Message
+from flowgentra_ai.llm import LLMConfig, LLM, Message
 
 config = LLMConfig(provider="openai", model="gpt-4o-mini")
-client = LLMClient.from_config(config)
+client = LLM.from_config(config)
 
 @register_handler("answer_question")
 def answer_question(state):

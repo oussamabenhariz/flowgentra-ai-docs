@@ -56,7 +56,7 @@ export const navigationStructure = [
     icon: 'robot',
     description: 'Ready-to-use agent templates',
     items: [
-      { id: 'basic-agents', label: 'Predefined Agents', route: '/docs/predefined-agents', description: 'ReAct, Conversational & more' },
+      { id: 'basic-agents', label: 'Predefined Agents', route: '/docs/predefined-agents', description: 'ZeroShotReAct, FewShotReAct, Conversational, ToolCalling, StructuredChat, SelfAskWithSearch, ReactDocstore' },
       { id: 'multi-agent', label: 'Multi-Agent Systems', route: '/docs/supervisor', description: 'Orchestrate teams of agents' },
       { id: 'supervision', label: 'Supervision & Planning', route: '/docs/multi-agent', description: 'Coordination strategies' },
       { id: 'custom-agents', label: 'Custom Agent Types', route: '/docs/custom-agents', section: 'guides' },
@@ -92,7 +92,7 @@ export const navigationStructure = [
         { label: 'Agents', route: '/docs/api/agents', section: 'api' },
       ]},
       { id: 'llm-api', label: 'LLM Module', submenu: [
-        { label: 'LLM Clients', route: '/docs/api/llm-clients', section: 'api' },
+        { label: 'LLMs', route: '/docs/api/llm-clients', section: 'api' },
         { label: 'Message Types', route: '/docs/api/messages', section: 'api' },
         { label: 'LLM Provider Config', route: '/docs/api/llm-config', section: 'api' },
       ]},

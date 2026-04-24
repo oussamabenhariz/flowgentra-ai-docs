@@ -6,7 +6,7 @@ const AgentBuilderGuide = () => {
 
 ## Overview
 
-The \`Agent\` and \`AgentBuilder\` provide high-level abstractions for common agent patterns. They bundle state, graph, LLM client, and memory into a single interface.
+The \`Agent\` and \`AgentBuilder\` provide high-level abstractions for common agent patterns. They bundle state, graph, LLM, and memory into a single interface.
 
 ## Creating Agents
 
@@ -118,11 +118,11 @@ await agent.run_with_thread("user-42", {"input": "Hello"})
 result = await agent.run_with_thread("user-42", {"input": "Remember me?"})
 \`\`\`
 
-### LLM Client Access
+### LLM Access
 
 \`\`\`python
-# Access the LLM client directly
-llm = agent.llm_client
+# Access the LLM directly
+llm = agent.llm
 response = await llm.invoke([
     {"role": "user", "content": "Hello"}
 ])

@@ -151,7 +151,7 @@ Expanded from 8 to 14 categories:
 | runtime/ | ✅ Full | **Runtime.jsx (NEW)** |
 | agent/ | ✅ Full | AgentsGuide.jsx, **PredefinedAgents.jsx** |
 | agents/ | ✅ Full | SupervisorGuide.jsx, AgentBuilderGuide.jsx |
-| llm/ | ✅ Full | LLMClientGuide.jsx, **LLMProviders.jsx** |
+| llm/ | ✅ Full | LLMGuide.jsx, **LLMProviders.jsx** |
 | tools/ | ✅ Full | ToolsGuide.jsx |
 | mcp/ | ✅ Full | MCPGuide.jsx |
 | memory/ | ✅ Full | MemoryGuide.jsx |
@@ -173,7 +173,7 @@ Expanded from 8 to 14 categories:
 |--------|----------|----------|
 | graph/ | ✅ Full | Graphs.jsx |
 | agent/ | ✅ Full | AgentsGuide.jsx, **AgentBuilderGuide.jsx** |
-| llm/ | ✅ Full | LLMClientGuide.jsx, **LLMProviders.jsx** |
+| llm/ | ✅ Full | LLMGuide.jsx, **LLMProviders.jsx** |
 | tools/ | ✅ Full | ToolsGuide.jsx |
 | tools/ | ✅ Full | ToolsGuide.jsx |
 | mcp/ | ✅ Full | MCPGuide.jsx |

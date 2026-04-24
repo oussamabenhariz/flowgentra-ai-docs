@@ -21,7 +21,7 @@ Each page is a self-contained React component using the `DocLayout` wrapper for 
 
 **Guide Pages (Domain-Specific):**
 - `AgentsGuide.jsx` - Agent patterns and predefined agents
-- `LLMClientGuide.jsx` - LLM integration and providers
+- `LLMGuide.jsx` - LLM integration and providers
 - `ToolsGuide.jsx` - Tool registry and function calling
 - `MemoryGuide.jsx` - Conversation memory and checkpointing
 - `RAGGuide.jsx` - Retrieval-augmented generation
@@ -159,7 +159,7 @@ Each page is a self-contained React component using the `DocLayout` wrapper for 
 | `node/` | Nodes | function-node, builtin-nodes, advanced-nodes | nodes |
 | `runtime/` | Runtime | runtime | runtime |
 | `agent/` | AgentsGuide | agents | agents |
-| `llm/` | LLMClientGuide | llm-clients, llm-config, messages | llm-client |
+| `llm/` | LLMGuide | llm-clients, llm-config, messages | llm-client |
 | `tools/` | ToolsGuide | tool-registry, tool-node, builtin-tools | tools |
 | `mcp/` | MCPGuide | mcp-config, mcp-connection | mcp |
 | `memory/` | MemoryGuide | memory-types, conversation-memory, token-buffer | memory |
@@ -181,7 +181,7 @@ Each page is a self-contained React component using the `DocLayout` wrapper for 
 |--------|-------------|-----------|-------|
 | `graph/` | Graphs | state-graph | graphs |
 | `agent/` | AgentsGuide | agent-builder, agents | agents |
-| `llm/` | LLMClientGuide | llm-clients, llm-config, messages | llm-client |
+| `llm/` | LLMGuide | llm-clients, llm-config, messages | llm-client |
 | `tools/` | ToolsGuide | tool-registry, tool-node | tools |
 | `mcp/` | MCPGuide | mcp-config | mcp |
 | `memory/` | MemoryGuide | memory-types, conversation-memory, token-buffer | memory |

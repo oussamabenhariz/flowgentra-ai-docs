@@ -12,7 +12,7 @@ import Nodes from './pages/Nodes'
 import StateConcepts from './pages/StateConcepts'
 import Runtime from './pages/Runtime'
 import AgentsGuide from './pages/AgentsGuide'
-import LLMClientGuide from './pages/LLMClientGuide'
+import LLMGuide from './pages/LLMGuide'
 import MemoryGuide from './pages/MemoryGuide'
 import HumanInLoopGuide from './pages/HumanInLoopGuide'
 import RAGGuide from './pages/RAGGuide'
@@ -77,7 +77,7 @@ export default function App() {
               {/* Guides */}
               <Route path="/docs/agents"             element={<AgentsGuide />} />
               <Route path="/docs/predefined-agents"  element={<PredefinedAgents />} />
-              <Route path="/docs/llm-client"         element={<LLMClientGuide />} />
+              <Route path="/docs/llm-client"         element={<LLMGuide />} />
               <Route path="/docs/llm-providers"      element={<LLMProviders />} />
               <Route path="/docs/tools"              element={<ToolsGuide />} />
               <Route path="/docs/mcp"                element={<MCPGuide />} />

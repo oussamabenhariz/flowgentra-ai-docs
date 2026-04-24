@@ -92,10 +92,10 @@ async fn main() -> Result<()> {
 
       <Section id="add-llm" title="Add an LLM Node">
         <p style={muted}>
-          Now let's wire in a real LLM. Flowgentra provides a unified <code style={inlineCode}>LLMClient</code> that works across all providers.
+          Now let's wire in a real LLM. Flowgentra provides a unified <code style={inlineCode}>LLM</code> that works across all providers.
         </p>
         <CodeBlock rust={`use flowgentra_ai::prelude::*;
-use flowgentra_ai::llm::{LLMConfig, LLMClient, Message};
+use flowgentra_ai::llm::{LLMConfig, LLM, Message};
 
 #[derive(State, Default, Clone)]
 struct ChatState {
@@ -106,7 +106,7 @@ struct ChatState {
 #[node]
 async fn call_llm(state: &mut ChatState) -> Result<()> {
     let config = LLMConfig::openai("gpt-4o");
-    let client = LLMClient::from_config(config)?;
+    let client = LLM::from_config(config)?;
 
     let messages = vec![
         Message::system("You are a helpful assistant."),
@@ -165,7 +165,7 @@ struct ToolState {
 
 #[node]
 async fn llm_node(state: &mut ToolState) -> Result<()> {
-    let client = LLMClient::openai("gpt-4o");
+    let client = LLM::openai("gpt-4o");
 
     let calculator = ToolDefinition::new(
         "calculator",

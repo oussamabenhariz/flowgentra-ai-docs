@@ -9,7 +9,7 @@ const anchors = [
   { id: 'streaming', label: 'Streaming' },
 ]
 
-export default function LLMClientGuide() {
+export default function LLMGuide() {
   const { language } = useLanguage()
 
   return (
@@ -18,45 +18,44 @@ export default function LLMClientGuide() {
         LLM Integration
       </h1>
       <p style={{ color: '#8b949e', marginBottom: 40, lineHeight: 1.7 }}>
-        Flowgentra provides a unified LLM client that works with 7 providers. You configure it once and use the same API regardless of whether you're using OpenAI, Anthropic, or a local Ollama model.
+        Flowgentra provides a unified LLM that works with 7 providers. You configure it once and use the same API regardless of whether you're using OpenAI, Anthropic, or a local Ollama model.
       </p>
 
       <Section id="creating-client" title="Creating a Client">
         <CodeBlock
-          rust={`use flowgentra_ai::llm::{LLMConfig, LLMClient};
+          rust={`use flowgentra_ai::llm::{LLMConfig, LLM};
 
 // OpenAI
-let client = LLMClient::from_config(LLMConfig::openai("gpt-4", "sk-..."));
+let client = LLM::from_config(LLMConfig::openai("gpt-4", "sk-..."));
 
 // Anthropic
-let client = LLMClient::from_config(LLMConfig::anthropic("claude-3-opus-20240229", "sk-ant-..."));
+let client = LLM::from_config(LLMConfig::anthropic("claude-3-opus-20240229", "sk-ant-..."));
 
 // Ollama (local)
-let client = LLMClient::from_config(LLMConfig::ollama("llama3"));
+let client = LLM::from_config(LLMConfig::ollama("llama3"));
 
 // Groq (fast inference)
-let client = LLMClient::from_config(LLMConfig::groq("llama3-70b-8192", "gsk_..."));`}
-          python={`from flowgentra_ai.llm import LLMConfig, LLMClient
+let client = LLM::from_config(LLMConfig::groq("llama3-70b-8192", "gsk_..."));`}
+          python={`from flowgentra_ai.llm import LLM
 
-# OpenAI
-client = LLMClient.from_config(
-    LLMConfig("openai", "gpt-4", api_key="sk-...")
-)
+# OpenAI — key auto-resolved from OPENAI_API_KEY env var or .env
+client = LLM(provider="openai", model="gpt-4")
 
-# Anthropic
-client = LLMClient.from_config(
-    LLMConfig("anthropic", "claude-3-opus-20240229", api_key="sk-ant-...")
-)
+# Anthropic — explicit key
+client = LLM(provider="anthropic", model="claude-3-opus-20240229", api_key="sk-ant-...")
 
 # Ollama (local — no API key needed)
-client = LLMClient.from_config(
-    LLMConfig("ollama", "llama3")
-)
+client = LLM(provider="ollama", model="llama3")
 
 # Groq (fast inference)
-client = LLMClient.from_config(
-    LLMConfig("groq", "llama3-70b-8192", api_key="gsk_...")
-)`}
+client = LLM(provider="groq", model="llama3-70b-8192", api_key="gsk_...")
+
+# With extra options
+client = LLM(provider="openai", model="gpt-4o", temperature=0.2, max_tokens=4096)
+
+# Alternative: LLM.from_config(LLMConfig(...)) still works if you need to reuse a config object
+# from flowgentra_ai.llm import LLMConfig
+# client = LLM.from_config(LLMConfig("openai", "gpt-4", api_key="sk-..."))`}
         />
 
         <h3 style={{ color: '#e6edf3', fontSize: '1.25rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>Supported Providers</h3>

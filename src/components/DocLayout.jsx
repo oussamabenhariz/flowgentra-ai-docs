@@ -36,7 +36,7 @@ export const ALL_DOC_PAGES = [
   { to: '/docs/api/state-graph',     label: 'StateGraph',           group: 'API Reference' },
   { to: '/docs/api/handlers-config', label: 'Handlers & Config',    group: 'API Reference' },
   { to: '/docs/api/agents',          label: 'Agents',               group: 'API Reference' },
-  { to: '/docs/api/llm',             label: 'LLM Clients',          group: 'API Reference' },
+  { to: '/docs/api/llm',             label: 'LLMs',          group: 'API Reference' },
   { to: '/docs/api/builtin-nodes',   label: 'Built-in Nodes',       group: 'API Reference' },
   { to: '/docs/api/rag',             label: 'RAG',                  group: 'API Reference' },
   { to: '/docs/api/memory',          label: 'Memory',               group: 'API Reference' },
