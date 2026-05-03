@@ -1,47 +1,58 @@
 import { useState } from 'react'
 import { NavLink, useLocation, Link } from 'react-router-dom'
 
-// Ordered flat list — used for Prev/Next navigation
+// Ordered flat list — routes MUST match App.jsx exactly
 export const ALL_DOC_PAGES = [
   // ── Get Started ──────────────────────────────────────────
-  { to: '/docs/getting-started',    label: 'Introduction',          group: 'Get Started' },
-  { to: '/docs/quickstart-rust',    label: 'Quick Start — Rust',    group: 'Get Started' },
-  { to: '/docs/quickstart-python',  label: 'Quick Start — Python',  group: 'Get Started' },
-  { to: '/docs/installation',       label: 'Installation',          group: 'Get Started' },
+  { to: '/docs/getting-started',    label: 'Introduction',             group: 'Get Started' },
+  { to: '/docs/installation',       label: 'Installation',             group: 'Get Started' },
+  { to: '/docs/quickstart-python',  label: 'Quick Start — Python',     group: 'Get Started' },
+  { to: '/docs/quickstart-rust',    label: 'Quick Start — Rust',       group: 'Get Started' },
   // ── Core Concepts ─────────────────────────────────────────
-  { to: '/docs/what-is-flowgentra', label: 'What is Flowgentra?',   group: 'Core Concepts' },
-  { to: '/docs/concepts/state',     label: 'State',                 group: 'Core Concepts' },
-  { to: '/docs/concepts/graphs',    label: 'Graphs & Workflows',    group: 'Core Concepts' },
-  { to: '/docs/concepts/nodes',     label: 'Nodes',                 group: 'Core Concepts' },
+  { to: '/docs/what-is-flowgentra', label: 'What is Flowgentra?',      group: 'Core Concepts' },
+  { to: '/docs/state-concepts',     label: 'State & Reducers',         group: 'Core Concepts' },
+  { to: '/docs/graphs',             label: 'Graphs & Execution',       group: 'Core Concepts' },
+  { to: '/docs/nodes',              label: 'Nodes',                    group: 'Core Concepts' },
+  { to: '/docs/runtime',            label: 'Runtime',                  group: 'Core Concepts' },
+  { to: '/docs/configuration',      label: 'Configuration & YAML',     group: 'Core Concepts' },
   // ── Guides ────────────────────────────────────────────────
-  { to: '/docs/guides/agents',          label: 'Building Agents',       group: 'Guides' },
-  { to: '/docs/guides/llm-client',      label: 'LLM Integration',       group: 'Guides' },
-  { to: '/docs/guides/tools',           label: 'Tool Use',              group: 'Guides' },
-  { to: '/docs/guides/mcp',             label: 'Model Context Protocol', group: 'Guides' },
-  { to: '/docs/guides/plugins',         label: 'Plugins System',         group: 'Guides' },
-  { to: '/docs/guides/middleware',      label: 'Middleware',             group: 'Guides' },
-  { to: '/docs/guides/validation',      label: 'Validation',             group: 'Guides' },
-  { to: '/docs/guides/memory',          label: 'Memory & Conversations', group: 'Guides' },
-  { to: '/docs/guides/rag',             label: 'RAG',                   group: 'Guides' },
-  { to: '/docs/guides/document-loaders',label: 'Document Loaders',      group: 'Guides' },
-  { to: '/docs/guides/supervisor',      label: 'Multi-Agent Systems',   group: 'Guides' },
-  { to: '/docs/guides/human-in-loop',   label: 'Human-in-the-Loop',    group: 'Guides' },
-  { to: '/docs/guides/error-handling',  label: 'Error Handling & Retries', group: 'Guides' },
-  { to: '/docs/guides/evaluation',      label: 'Evaluation',            group: 'Guides' },
-  { to: '/docs/guides/observability',   label: 'Observability & Tracing', group: 'Guides' },
-  { to: '/docs/guides/advanced-nodes',  label: 'Advanced Nodes',        group: 'Guides' },
-  { to: '/docs/guides/reranking',       label: 'Reranking',             group: 'Guides' },
-  { to: '/docs/guides/configuration',   label: 'Configuration',         group: 'Guides' },
+  { to: '/docs/agents',             label: 'Building Agents',          group: 'Guides' },
+  { to: '/docs/predefined-agents',  label: 'Predefined Agents',        group: 'Guides' },
+  { to: '/docs/llm-client',         label: 'LLM Integration',          group: 'Guides' },
+  { to: '/docs/llm-providers',      label: 'LLM Providers',            group: 'Guides' },
+  { to: '/docs/tools',              label: 'Tools',                    group: 'Guides' },
+  { to: '/docs/mcp',                label: 'MCP Integration',          group: 'Guides' },
+  { to: '/docs/memory',             label: 'Memory',                   group: 'Guides' },
+  { to: '/docs/rag',                label: 'RAG Pipeline',             group: 'Guides' },
+  { to: '/docs/document-loaders',   label: 'Document Loaders',         group: 'Guides' },
+  { to: '/docs/reranking',          label: 'Reranking',                group: 'Guides' },
+  { to: '/docs/supervisor',         label: 'Multi-Agent Supervisor',   group: 'Guides' },
+  { to: '/docs/human-in-the-loop',  label: 'Human-in-the-Loop',       group: 'Guides' },
+  { to: '/docs/error-handling',     label: 'Error Handling',           group: 'Guides' },
+  { to: '/docs/evaluation',         label: 'Evaluation',               group: 'Guides' },
+  { to: '/docs/observability',      label: 'Observability',            group: 'Guides' },
+  { to: '/docs/advanced-nodes',     label: 'Advanced Nodes',           group: 'Guides' },
+  { to: '/docs/plugins',            label: 'Plugins',                  group: 'Guides' },
+  { to: '/docs/middleware',         label: 'Middleware',               group: 'Guides' },
+  { to: '/docs/validation',         label: 'Validation',               group: 'Guides' },
+  { to: '/docs/performance',        label: 'Performance',              group: 'Guides' },
+  { to: '/docs/database',           label: 'Database',                 group: 'Guides' },
+  // ── Tutorials ─────────────────────────────────────────────
+  { to: '/docs/tutorials/research-assistant', label: 'Research Assistant', group: 'Tutorials' },
   // ── API Reference ─────────────────────────────────────────
-  { to: '/docs/api/state-graph',     label: 'StateGraph',           group: 'API Reference' },
-  { to: '/docs/api/handlers-config', label: 'Handlers & Config',    group: 'API Reference' },
-  { to: '/docs/api/agents',          label: 'Agents',               group: 'API Reference' },
-  { to: '/docs/api/llm',             label: 'LLMs',          group: 'API Reference' },
-  { to: '/docs/api/builtin-nodes',   label: 'Built-in Nodes',       group: 'API Reference' },
-  { to: '/docs/api/rag',             label: 'RAG',                  group: 'API Reference' },
-  { to: '/docs/api/memory',          label: 'Memory',               group: 'API Reference' },
-  { to: '/docs/api/supervisor',      label: 'Supervisor',           group: 'API Reference' },
-  { to: '/docs/api/observability',   label: 'Observability',        group: 'API Reference' },
+  { to: '/docs/api/state-graph',     label: 'StateGraph',              group: 'API Reference' },
+  { to: '/docs/api/agent-builder',   label: 'AgentBuilder',            group: 'API Reference' },
+  { to: '/docs/api/agents',          label: 'Agents',                  group: 'API Reference' },
+  { to: '/docs/api/llm-clients',     label: 'LLM Clients',             group: 'API Reference' },
+  { to: '/docs/api/messages',        label: 'Messages',                group: 'API Reference' },
+  { to: '/docs/api/tool-registry',   label: 'Tool Registry',           group: 'API Reference' },
+  { to: '/docs/api/builtin-nodes',   label: 'Built-in Nodes',          group: 'API Reference' },
+  { to: '/docs/api/memory-types',    label: 'Memory Types',            group: 'API Reference' },
+  { to: '/docs/api/checkpointer',    label: 'Checkpointer',            group: 'API Reference' },
+  { to: '/docs/api/rag-config',      label: 'RAG Config',              group: 'API Reference' },
+  { to: '/docs/api/vector-store',    label: 'Vector Store',            group: 'API Reference' },
+  { to: '/docs/api/supervisor',      label: 'Supervisor',              group: 'API Reference' },
+  { to: '/docs/api/observability',   label: 'Observability',           group: 'API Reference' },
   // ── Resources ─────────────────────────────────────────────
   { to: '/docs/examples',       label: 'Examples',       group: 'Resources' },
   { to: '/docs/best-practices', label: 'Best Practices', group: 'Resources' },
@@ -51,7 +62,7 @@ export const ALL_DOC_PAGES = [
 ]
 
 // Build grouped sidebar from flat list
-const GROUPS = ['Get Started', 'Core Concepts', 'Guides', 'API Reference', 'Resources']
+const GROUPS = ['Get Started', 'Core Concepts', 'Guides', 'Tutorials', 'API Reference', 'Resources']
 const sidebarLinks = GROUPS.map(group => ({
   group,
   links: ALL_DOC_PAGES.filter(p => p.group === group),

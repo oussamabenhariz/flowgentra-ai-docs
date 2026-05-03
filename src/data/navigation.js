@@ -180,6 +180,7 @@ export const navigationStructure = [
     items: [
       { id: 'examples', label: 'Code Examples', route: '/docs/examples', description: 'Copy-paste ready code' },
       { id: 'tutorials', label: 'End-to-End Tutorials', submenu: [
+        { label: '🔬 Research Assistant', route: '/docs/tutorials/research-assistant' },
         { label: 'Build a Chatbot', route: '/docs/tutorials/chatbot', section: 'tutorials' },
         { label: 'Multi-Agent Research', route: '/docs/tutorials/multi-agent', section: 'tutorials' },
         { label: 'RAG Agent', route: '/docs/tutorials/rag-agent', section: 'tutorials' },

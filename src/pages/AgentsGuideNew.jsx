@@ -1,4 +1,4 @@
-import DocLayout from '../components/DocLayout'
+﻿import DocLayout from '../components/DocLayout'
 import CodeBlock from '../components/CodeBlock'
 import { useLanguage } from '../context/LanguageContext'
 import { Link } from 'react-router-dom'
@@ -367,19 +367,19 @@ agent = AgentBuilder() \\
             {
               title: 'Add Tools to Your Agent',
               desc: 'Make your agent more capable with custom tools',
-              link: '/docs/guides/tools',
+              link: '/docs/tools',
               icon: '🔧'
             },
             {
               title: 'Handle Conversations',
               desc: 'Add memory so agents remember previous interactions',
-              link: '/docs/guides/memory',
+              link: '/docs/memory',
               icon: '🧠'
             },
             {
               title: 'Build Multi-Agent Systems',
               desc: 'Coordinate multiple agents working together',
-              link: '/docs/guides/supervisor',
+              link: '/docs/supervisor',
               icon: '👥'
             },
             {

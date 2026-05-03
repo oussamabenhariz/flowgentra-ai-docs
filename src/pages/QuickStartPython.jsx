@@ -1,4 +1,4 @@
-import DocLayout from '../components/DocLayout'
+﻿import DocLayout from '../components/DocLayout'
 import CodeBlock from '../components/CodeBlock'
 import { Link } from 'react-router-dom'
 // Note: next-card links below use <Link> for internal routing
@@ -251,11 +251,11 @@ result = agent.run_with_thread("session-001")`} />
       <Section id="next" title="Next Steps">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
           {[
-            { to: '/docs/concepts/state',     label: '📦 State Management',    desc: 'State class, TypedDict, reducers' },
-            { to: '/docs/concepts/graphs',    label: '🗺️ Graphs & Routing',    desc: 'Conditional edges, loops' },
-            { to: '/docs/guides/agents',      label: '🤖 Agent Patterns',      desc: 'ReAct, conversational, config-driven' },
-            { to: '/docs/guides/llm-client',  label: '🔌 LLM Integration',     desc: '7 providers, tool calling, streaming' },
-            { to: '/docs/guides/memory',      label: '💾 Memory',              desc: 'Conversation history, checkpointing' },
+            { to: '/docs/state-concepts',     label: '📦 State Management',    desc: 'State class, TypedDict, reducers' },
+            { to: '/docs/graphs',    label: '🗺️ Graphs & Routing',    desc: 'Conditional edges, loops' },
+            { to: '/docs/agents',      label: '🤖 Agent Patterns',      desc: 'ReAct, conversational, config-driven' },
+            { to: '/docs/llm-client',  label: '🔌 LLM Integration',     desc: '7 providers, tool calling, streaming' },
+            { to: '/docs/memory',      label: '💾 Memory',              desc: 'Conversation history, checkpointing' },
             { to: '/docs/examples',           label: '💡 Examples',            desc: 'Chatbot, RAG, multi-agent' },
           ].map(item => (
             <Link key={item.to} to={item.to} style={nextCard}
@@ -309,3 +309,4 @@ const codeStyle = {
   padding: '10px 14px', fontSize: '0.8rem', lineHeight: 1.6,
   color: '#e6edf3', margin: '10px 0 0', overflowX: 'auto', whiteSpace: 'pre',
 }
+

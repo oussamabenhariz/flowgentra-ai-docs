@@ -1,4 +1,4 @@
-import DocLayout from '../components/DocLayout'
+﻿import DocLayout from '../components/DocLayout'
 import CodeBlock from '../components/CodeBlock'
 import { useLanguage } from '../context/LanguageContext'
 import { Link } from 'react-router-dom'
@@ -372,25 +372,25 @@ class GoodState(State):
             {
               title: 'Build Your First Graph',
               desc: 'Connect nodes with state flowing between them',
-              link: '/docs/concepts/graphs',
+              link: '/docs/graphs',
               icon: '🔗'
             },
             {
               title: 'Add Memory to Agents',
               desc: 'Make agents remember conversations using state',
-              link: '/docs/guides/memory',
+              link: '/docs/memory',
               icon: '🧠'
             },
             {
               title: 'Handle Complex Workflows',
               desc: 'Branching, looping, and conditional state updates',
-              link: '/docs/guides/advanced-nodes',
+              link: '/docs/advanced-nodes',
               icon: '🔀'
             },
             {
               title: 'Production State Management',
               desc: 'Checkpointing, recovery, and scaling state',
-              link: '/docs/guides/state',
+              link: '/docs/state-concepts',
               icon: '🏭'
             },
           ].map(step => (

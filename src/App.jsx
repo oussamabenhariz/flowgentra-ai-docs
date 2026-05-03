@@ -12,7 +12,7 @@ import Nodes from './pages/Nodes'
 import StateConcepts from './pages/StateConcepts'
 import Runtime from './pages/Runtime'
 import AgentsGuide from './pages/AgentsGuide'
-import LLMGuide from './pages/LLMGuide'
+import LLMGuide from './pages/LLMClientGuide'
 import MemoryGuide from './pages/MemoryGuide'
 import HumanInLoopGuide from './pages/HumanInLoopGuide'
 import RAGGuide from './pages/RAGGuide'
@@ -45,6 +45,7 @@ import PluginsCompleteGuide from './pages/PluginsCompleteGuide'
 import MiddlewareCompleteGuide from './pages/MiddlewareCompleteGuide'
 import ValidationCompleteGuide from './pages/ValidationCompleteGuide'
 import PerformanceOptimizationGuide from './pages/PerformanceOptimizationGuide'
+import TutorialResearchAssistant from './pages/TutorialResearchAssistant'
 
 // Import navigation data structures
 import { navigationStructure, searchCategories, featureHighlights, useCaseNavigation } from './data/navigation'
@@ -97,7 +98,8 @@ export default function App() {
               <Route path="/docs/validation"          element={<ValidationCompleteGuide />} />
               <Route path="/docs/performance"         element={<PerformanceOptimizationGuide />} />
               <Route path="/docs/database"           element={<DatabaseGuide />} />
-              <Route path="/docs/api/agent-builder"  element={<AgentBuilderGuide />} />
+              <Route path="/docs/api/agent-builder"        element={<AgentBuilderGuide />} />
+              <Route path="/docs/tutorials/research-assistant" element={<TutorialResearchAssistant />} />
 
               {/* API Reference */}
               <Route path="/docs/api/:topicId" element={<TopicPage />} />

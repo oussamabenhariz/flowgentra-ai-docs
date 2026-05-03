@@ -1,4 +1,4 @@
-import DocLayout from '../components/DocLayout'
+﻿import DocLayout from '../components/DocLayout'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../context/LanguageContext'
 
@@ -113,17 +113,17 @@ export default function GettingStarted() {
             {
               num: '1', accent: '#CE422B', title: 'State',
               body: 'A typed container of key-value data that flows through the entire graph. Every node reads from and writes to state. In Rust: a struct with #[derive(State)]. In Python: a TypedDict or State instance.',
-              link: '/docs/concepts/state',
+              link: '/docs/state-concepts',
             },
             {
               num: '2', accent: '#3572A5', title: 'Nodes',
               body: 'Functions that receive state and return updated state. Nodes do the actual work: call LLMs, execute tools, transform data, make decisions. One node = one unit of responsibility.',
-              link: '/docs/concepts/nodes',
+              link: '/docs/nodes',
             },
             {
               num: '3', accent: '#3fb950', title: 'Graph',
               body: 'The wiring that connects nodes. Edges define execution order. Conditional edges route dynamically based on state. You compile a graph once, then invoke it many times.',
-              link: '/docs/concepts/graphs',
+              link: '/docs/graphs',
             },
           ].map(c => (
             <Link key={c.num} to={c.link} style={{
@@ -151,14 +151,15 @@ export default function GettingStarted() {
       <Section id="explore" title="Explore the Docs">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
           {[
-            { to: '/docs/installation',      emoji: '📦', label: 'Installation',          desc: 'Cargo, pip, or build from source' },
-            { to: '/docs/guides/agents',     emoji: '🤖', label: 'Building Agents',       desc: 'ZeroShotReAct, conversational, config-driven' },
-            { to: '/docs/guides/llm-client', emoji: '🔌', label: 'LLM Integration',       desc: '7 providers, tool calling, streaming' },
-            { to: '/docs/guides/rag',        emoji: '🔍', label: 'RAG',                   desc: 'Embeddings, vector stores, retrieval' },
-            { to: '/docs/guides/supervisor', emoji: '🎯', label: 'Multi-Agent Systems',   desc: '11 orchestration strategies' },
-            { to: '/docs/guides/memory',     emoji: '💾', label: 'Memory',                desc: 'Conversation history, checkpointing' },
-            { to: '/docs/api/state-graph',   emoji: '📖', label: 'API Reference',         desc: 'Complete API for all modules' },
-            { to: '/docs/examples',          emoji: '💡', label: 'Examples',              desc: 'Chatbot, RAG agent, multi-agent' },
+            { to: '/docs/installation',       emoji: '📦', label: 'Installation',        desc: 'Cargo, pip, or build from source' },
+            { to: '/docs/agents',             emoji: '🤖', label: 'Building Agents',     desc: 'ZeroShotReAct, conversational, config-driven' },
+            { to: '/docs/llm-client',         emoji: '🔌', label: 'LLM Integration',     desc: '7 providers, tool calling, streaming' },
+            { to: '/docs/rag',                emoji: '🔍', label: 'RAG',                 desc: 'Embeddings, vector stores, retrieval' },
+            { to: '/docs/supervisor',         emoji: '🎯', label: 'Multi-Agent',         desc: '11 orchestration strategies' },
+            { to: '/docs/memory',             emoji: '💾', label: 'Memory',              desc: 'Conversation history, checkpointing' },
+            { to: '/docs/api/state-graph',    emoji: '📖', label: 'API Reference',       desc: 'Complete API for all modules' },
+            { to: '/docs/examples',           emoji: '💡', label: 'Examples',            desc: 'Chatbot, RAG agent, multi-agent' },
+            { to: '/docs/tutorials/research-assistant', emoji: '🔬', label: 'E2E Tutorial', desc: 'Build a research assistant from scratch' },
           ].map(item => (
             <Link key={item.to} to={item.to} style={card}
               onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent)'}
@@ -191,3 +192,4 @@ const card = {
   borderRadius: 8, padding: '18px 18px', textDecoration: 'none',
   display: 'block', transition: 'border-color 0.2s',
 }
+

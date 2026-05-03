@@ -1,31 +1,47 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, Link, useNavigate } from 'react-router-dom'
 import LanguageSwitcher from './LanguageSwitcher'
 import { useLanguage } from '../context/LanguageContext'
+import SearchModal from './SearchModal'
 
 const guides = [
-  { to: '/docs/guides/agents',          label: 'Building Agents' },
-  { to: '/docs/guides/llm-client',      label: 'LLM Integration' },
-  { to: '/docs/guides/tools',           label: 'Tool Use' },
-  { to: '/docs/guides/mcp',             label: 'Model Context Protocol' },
-  { to: '/docs/guides/plugins',         label: 'Plugins System' },
-  { to: '/docs/guides/middleware',      label: 'Middleware' },
-  { to: '/docs/guides/validation',      label: 'Validation' },
-  { to: '/docs/guides/memory',          label: 'Memory & Conversations' },
-  { to: '/docs/guides/rag',             label: 'RAG' },
-  { to: '/docs/guides/supervisor',      label: 'Multi-Agent Systems' },
-  { to: '/docs/guides/human-in-loop',   label: 'Human-in-the-Loop' },
-  { to: '/docs/guides/error-handling',  label: 'Error Handling' },
-  { to: '/docs/guides/evaluation',      label: 'Evaluation' },
-  { to: '/docs/guides/observability',   label: 'Observability' },
-  { to: '/docs/guides/configuration',   label: 'Configuration' },
+  { to: '/docs/agents',            label: 'Building Agents' },
+  { to: '/docs/predefined-agents', label: 'Predefined Agents' },
+  { to: '/docs/llm-client',        label: 'LLM Integration' },
+  { to: '/docs/tools',             label: 'Tools' },
+  { to: '/docs/mcp',               label: 'MCP Integration' },
+  { to: '/docs/memory',            label: 'Memory' },
+  { to: '/docs/rag',               label: 'RAG Pipeline' },
+  { to: '/docs/supervisor',        label: 'Multi-Agent Supervisor' },
+  { to: '/docs/human-in-the-loop', label: 'Human-in-the-Loop' },
+  { to: '/docs/error-handling',    label: 'Error Handling' },
+  { to: '/docs/evaluation',        label: 'Evaluation' },
+  { to: '/docs/observability',     label: 'Observability' },
+  { to: '/docs/configuration',     label: 'Configuration' },
+  { to: '/docs/plugins',           label: 'Plugins' },
+  { to: '/docs/middleware',        label: 'Middleware' },
+  { to: '/docs/validation',        label: 'Validation' },
+  { to: '/docs/performance',       label: 'Performance' },
 ]
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [guidesOpen, setGuidesOpen] = useState(false)
+  const [searchOpen, setSearchOpen] = useState(false)
   const { language } = useLanguage()
   const isRust = language === 'rust'
+
+  // Cmd+K / Ctrl+K to open search
+  useEffect(() => {
+    const handle = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault()
+        setSearchOpen(o => !o)
+      }
+    }
+    window.addEventListener('keydown', handle)
+    return () => window.removeEventListener('keydown', handle)
+  }, [])
 
   const linkStyle = (isActive) => ({
     color: isActive ? 'var(--accent)' : '#8b949e',
@@ -112,6 +128,9 @@ export default function Navbar() {
             )}
           </div>
 
+          <NavLink to="/docs/tutorials/research-assistant" style={({ isActive }) => linkStyle(isActive)}>
+            Tutorials
+          </NavLink>
           <NavLink to="/docs/api/state-graph" style={({ isActive }) => linkStyle(isActive)}>
             API
           </NavLink>
@@ -119,6 +138,28 @@ export default function Navbar() {
             Examples
           </NavLink>
         </div>
+
+        {/* Search bar */}
+        <button
+          onClick={() => setSearchOpen(true)}
+          className="desktop-nav"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: '#161b22', border: '1px solid #21262d',
+            borderRadius: 7, padding: '6px 12px',
+            color: '#8b949e', fontSize: '0.8rem', cursor: 'pointer',
+            transition: 'border-color 0.15s',
+            minWidth: 180,
+          }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = '#30363d'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = '#21262d'}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <span style={{ flex: 1, textAlign: 'left' }}>Search docs…</span>
+          <kbd style={{ background: '#21262d', border: '1px solid #30363d', borderRadius: 4, padding: '1px 5px', fontSize: '0.65rem', color: '#484f58' }}>⌘K</kbd>
+        </button>
 
         {/* Right side */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -188,6 +229,8 @@ export default function Navbar() {
           <LanguageSwitcher />
         </div>
       )}
+
+      <SearchModal isOpen={searchOpen} onClose={() => setSearchOpen(false)} />
 
       <style>{`
         @media (max-width: 900px) {

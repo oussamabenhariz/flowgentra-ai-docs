@@ -1,4 +1,4 @@
-import DocLayout from '../components/DocLayout'
+﻿import DocLayout from '../components/DocLayout'
 import CodeBlock from '../components/CodeBlock'
 import { Link } from 'react-router-dom'
 
@@ -226,10 +226,10 @@ async fn main() -> Result<()> {
       <Section id="next" title="Next Steps">
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
           {[
-            { to: '/docs/concepts/state',     label: '📦 State & Reducers',    desc: 'Typed state, parallel merges' },
-            { to: '/docs/concepts/graphs',    label: '🗺️ Graphs & Routing',    desc: 'Conditional edges, subgraphs' },
-            { to: '/docs/guides/agents',      label: '🤖 Agent Patterns',      desc: 'ReAct, ZeroShot, Conversational' },
-            { to: '/docs/guides/memory',      label: '💾 Memory & Checkpoints', desc: 'Resume interrupted workflows' },
+            { to: '/docs/state-concepts',     label: '📦 State & Reducers',    desc: 'Typed state, parallel merges' },
+            { to: '/docs/graphs',    label: '🗺️ Graphs & Routing',    desc: 'Conditional edges, subgraphs' },
+            { to: '/docs/agents',      label: '🤖 Agent Patterns',      desc: 'ReAct, ZeroShot, Conversational' },
+            { to: '/docs/memory',      label: '💾 Memory & Checkpoints', desc: 'Resume interrupted workflows' },
             { to: '/docs/api/state-graph',    label: '📖 API Reference',        desc: 'Full StateGraph API' },
             { to: '/docs/examples',           label: '💡 Examples',             desc: 'Real-world patterns' },
           ].map(item => (
@@ -283,3 +283,4 @@ const nextCard = {
   borderRadius: 8, padding: '16px 18px', textDecoration: 'none',
   display: 'block', transition: 'border-color 0.2s',
 }
+

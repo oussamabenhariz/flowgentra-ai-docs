@@ -1,4 +1,4 @@
-import DocLayout from '../components/DocLayout'
+﻿import DocLayout from '../components/DocLayout'
 import { Link } from 'react-router-dom'
 import { useLanguage } from '../context/LanguageContext'
 
@@ -49,14 +49,14 @@ export default function GettingStarted() {
               path: 'Intermediate Path',
               steps: ['Core Concepts → Workflows → Tools'],
               time: '~30 minutes',
-              link: '/docs/concepts/graphs'
+              link: '/docs/graphs'
             },
             {
               title: '🔧 Scaling & Optimizing?',
               path: 'Advanced Path',
               steps: ['Multi-Agent → Performance → Production'],
               time: '~1 hour',
-              link: '/docs/guides/supervisor'
+              link: '/docs/supervisor'
             },
           ].map(path => (
             <div key={path.title} style={{
@@ -259,7 +259,7 @@ print(result)`}
             {
               title: 'Explore Core Concepts',
               desc: 'Understand graphs, nodes, and state',
-              link: '/docs/concepts/graphs',
+              link: '/docs/graphs',
               icon: '🎯'
             },
             {
