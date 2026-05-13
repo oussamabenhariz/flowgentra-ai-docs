@@ -35,11 +35,11 @@ export default function QuickStartRust() {
       <Section id="install" title="Installation">
         <p style={muted}>Add Flowgentra to your <code style={inlineCode}>Cargo.toml</code>:</p>
         <CodeBlock forceLang="toml" rust={`[dependencies]
-flowgentra-ai = "0.1.5"
+flowgentra-ai = "0.2"
 tokio = { version = "1", features = ["full"] }
 
 # Optional feature flags:
-# flowgentra-ai = { version = "0.1.5", features = ["openai", "tracing", "memory"] }`} />
+# flowgentra-ai = { version = "0.2", features = ["openai", "tracing", "memory"] }`} />
 
         <Callout type="info" title="Feature flags">
           <p style={{ margin: 0 }}>Enable only what you need: <code style={inlineCode}>openai</code> for OpenAI provider, <code style={inlineCode}>tracing</code> for structured logs, <code style={inlineCode}>memory</code> for checkpointing, <code style={inlineCode}>rag</code> for vector stores.</p>

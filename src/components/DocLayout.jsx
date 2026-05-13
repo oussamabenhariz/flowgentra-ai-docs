@@ -21,6 +21,7 @@ export const ALL_DOC_PAGES = [
   { to: '/docs/llm-client',         label: 'LLM Integration',          group: 'Guides' },
   { to: '/docs/llm-providers',      label: 'LLM Providers',            group: 'Guides' },
   { to: '/docs/tools',              label: 'Tools',                    group: 'Guides' },
+  { to: '/docs/skills',             label: 'Skills',                   group: 'Guides' },
   { to: '/docs/mcp',                label: 'MCP Integration',          group: 'Guides' },
   { to: '/docs/memory',             label: 'Memory',                   group: 'Guides' },
   { to: '/docs/rag',                label: 'RAG Pipeline',             group: 'Guides' },

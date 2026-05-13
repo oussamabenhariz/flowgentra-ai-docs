@@ -73,9 +73,13 @@ let graph = StateGraph::builder()
     .edge("respond", "__end__")
     .build();`}
           python={`from flowgentra_ai.graph import StateGraph, END
-from flowgentra_ai import State
+from typing import TypedDict
 
-builder = StateGraph()
+class MyState(TypedDict):
+    input: str
+    result: str
+
+builder = StateGraph(MyState)
 
 # Add nodes
 builder.add_node("fetch",   fetch_fn)
@@ -94,7 +98,7 @@ builder.add_edge("respond", END)
 graph = builder.compile()
 
 # Run
-result = graph.invoke(State({"input": "hello"}))`}
+result = graph.invoke({"input": "hello", "result": ""})`}
         />
       </Section>
 

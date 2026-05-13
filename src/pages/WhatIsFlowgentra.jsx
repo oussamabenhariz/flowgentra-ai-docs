@@ -115,7 +115,7 @@ state["answer"]  # read it later`}
     .edge("fetch",   "process")
     .edge("process", "__end__")
     .build();`}
-          python={`builder = StateGraph()
+          python={`builder = StateGraph(dict)  # or pass a TypedDict for typed state
 builder.add_node("fetch",   fetch_fn)
 builder.add_node("process", process_fn)
 builder.add_edge("fetch", "process")
@@ -275,7 +275,7 @@ result = agent.run_with_input("Hello!")`}
           Build the graph programmatically. Best for complex logic with non-trivial routing.
         </p>
         <CodeBlock
-          python={`builder = StateGraph()
+          python={`builder = StateGraph(dict)  # or pass a TypedDict class
 builder.add_node("step_a", fn_a)
 builder.add_node("step_b", fn_b)
 builder.set_entry_point("step_a")
@@ -327,7 +327,7 @@ result = agent.run()`}
             <tbody>
               <tr>
                 <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}><code>StateGraph::&lt;S&gt;::builder()</code></td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}><code>StateGraph()</code></td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}><code>StateGraph(MyState)</code></td>
               </tr>
               <tr>
                 <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}><code>DynState</code></td>

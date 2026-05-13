@@ -204,9 +204,10 @@ let response1 = agent.run("What's 15 + 27?").await?;
 let response2 = agent.run("Now multiply that by 3").await?;
 // Agent recalls the previous result (42) and computes 42 * 3 = 126`}
           python={`from flowgentra_ai.agent import MemoryAwareAgent
+from flowgentra_ai.llm import LLM
 
 agent = MemoryAwareAgent(
-    llm_config=llm_config,
+    llm=LLM(provider="openai", model="gpt-4o"),
     memory_steps=20,  # Keep 20 recent messages
     tools=[calculator_tool]
 )

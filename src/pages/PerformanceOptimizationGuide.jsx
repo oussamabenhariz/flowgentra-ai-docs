@@ -294,10 +294,10 @@ results = asyncio.run(asyncio.gather(*tasks))
           <div style={{ background: '#0d1117', border: '1px solid #21262d', borderRadius: 8, padding: 16, marginBottom: 16 }}>
             <div style={{ fontWeight: 600, color: '#58a6ff', marginBottom: 12 }}>1. Use Faster Models</div>
             <CodeBlock python={`# Slow (but powerful): GPT-4 - 60s, \\$0.03 per call
-config = LLMConfig(provider="openai", model="gpt-4")
+llm_powerful = LLM(provider="openai", model="gpt-4o")
 
-# Fast (lighter): GPT-4o-mini - 5s, \\$0.00015 per call  
-config = LLMConfig(provider="openai", model="gpt-4o-mini")
+# Fast (lighter): GPT-4o-mini - 5s, \\$0.00015 per call
+llm_fast = LLM(provider="openai", model="gpt-4o-mini")
 
 # Pattern: Use fast model first, escalate only if needed
 def smart_routing(state):

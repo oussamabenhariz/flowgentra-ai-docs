@@ -19,14 +19,14 @@ export OPENAI_API_KEY="sk-..."
 
 **Python:**
 \`\`\`python
-from flowgentra_ai.llm import LLMConfig, LLMProvider
+from flowgentra_ai.llm import LLM
 
-llm_config = LLMConfig(
-    provider=LLMProvider.OpenAI,
-    model="gpt-4",  # or "gpt-3.5-turbo", "gpt-4-turbo"
+client = LLM(
+    provider="openai",
+    model="gpt-4o",  # or "gpt-4o-mini", "gpt-4-turbo"
     temperature=0.7,
     max_tokens=2048,
-    api_key="sk-...",  # optional, uses env var if not provided
+    api_key="sk-...",  # optional — reads OPENAI_API_KEY env var if omitted
 )
 \`\`\`
 
@@ -71,11 +71,11 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 
 **Python:**
 \`\`\`python
-from flowgentra_ai.llm import LLMConfig, LLMProvider
+from flowgentra_ai.llm import LLM
 
-llm_config = LLMConfig(
-    provider=LLMProvider.Anthropic,
-    model="claude-3-opus",  # or "claude-3-sonnet", "claude-3-haiku"
+client = LLM(
+    provider="anthropic",
+    model="claude-3-5-sonnet-20241022",  # or "claude-3-5-haiku-20241022"
     temperature=0.7,
     max_tokens=4096,
 )
@@ -104,11 +104,11 @@ export MISTRAL_API_KEY="..."
 
 **Python:**
 \`\`\`python
-from flowgentra_ai.llm import LLMConfig, LLMProvider
+from flowgentra_ai.llm import LLM
 
-llm_config = LLMConfig(
-    provider=LLMProvider.Mistral,
-    model="mistral-large",  # or "mistral-medium", "mistral-small"
+client = LLM(
+    provider="mistral",
+    model="mistral-large-latest",  # or "mistral-medium-latest", "mistral-small-latest"
     temperature=0.7,
 )
 \`\`\`
@@ -131,11 +131,11 @@ export GROQ_API_KEY="gsk_..."
 
 **Python:**
 \`\`\`python
-from flowgentra_ai.llm import LLMConfig, LLMProvider
+from flowgentra_ai.llm import LLM
 
-llm_config = LLMConfig(
-    provider=LLMProvider.Groq,
-    model="mixtral-8x7b",  # Open-weight model
+client = LLM(
+    provider="groq",
+    model="llama-3.3-70b-versatile",  # or "llama-3.1-8b-instant"
     temperature=0.7,
 )
 \`\`\`
@@ -164,11 +164,11 @@ ollama serve
 
 **Python:**
 \`\`\`python
-from flowgentra_ai.llm import LLMConfig, LLMProvider
+from flowgentra_ai.llm import LLM
 
-llm_config = LLMConfig(
-    provider=LLMProvider.Ollama,
-    model="llama2",  # or "neural-chat", "mistral", etc.
+client = LLM(
+    provider="ollama",
+    model="llama3.2",  # or "llama3.1", "mistral", "phi3", etc.
     base_url="http://localhost:11434",  # Ollama default
 )
 \`\`\`
@@ -202,11 +202,11 @@ export AZURE_OPENAI_ENDPOINT="https://your-instance.openai.azure.com/"
 
 **Python:**
 \`\`\`python
-from flowgentra_ai.llm import LLMConfig, LLMProvider
+from flowgentra_ai.llm import LLM
 
-llm_config = LLMConfig(
-    provider=LLMProvider.AzureOpenAI,
-    model="gpt-4",
+client = LLM(
+    provider="azure",
+    model="gpt-4o",
     base_url="https://your-instance.openai.azure.com/",
     api_key=os.getenv("AZURE_OPENAI_API_KEY"),
 )
@@ -228,11 +228,11 @@ export HUGGINGFACE_API_KEY="hf_..."
 
 **Python:**
 \`\`\`python
-from flowgentra_ai.llm import LLMConfig, LLMProvider
+from flowgentra_ai.llm import LLM
 
-llm_config = LLMConfig(
-    provider=LLMProvider.HuggingFace,
-    model="meta-llama/Llama-2-7b-chat",
+client = LLM(
+    provider="huggingface",
+    model="meta-llama/Llama-3.2-7B-Instruct",
     api_key=os.getenv("HUGGINGFACE_API_KEY"),
 )
 \`\`\`
@@ -261,11 +261,13 @@ llm_config = LLMConfig(
 Change config and rebuild agent:
 
 \`\`\`python
-# Start with OpenAI
-agent = Agent.create(llm_config=openai_config)
+from flowgentra_ai.llm import LLM
 
-# Switch to Anthropic
-new_agent = Agent.create(llm_config=anthropic_config)
+# Start with OpenAI
+client = LLM(provider="openai", model="gpt-4o")
+
+# Switch to Anthropic — just change one line
+client = LLM(provider="anthropic", model="claude-3-5-sonnet-20241022")
 \`\`\`
 
 ### From YAML
@@ -285,18 +287,15 @@ llm:
 Use multiple providers with fallbacks:
 
 \`\`\`python
-from flowgentra_ai.llm import FallbackChain
+from flowgentra_ai.llm import LLM, FallbackLLM
 
-chain = FallbackChain([
-    openai_config,      # Try OpenAI first
-    anthropic_config,   # Fallback to Anthropic
-    groq_config,        # Fallback to Groq
-])
-
-agent = Agent.create(llm_config=chain)
+openai   = LLM(provider="openai",     model="gpt-4o")
+anthropic = LLM(provider="anthropic", model="claude-3-5-haiku-20241022")
+groq     = LLM(provider="groq",       model="llama-3.3-70b-versatile")
 
 # If OpenAI fails, automatically tries Anthropic, then Groq
-result = await agent.run(state)
+client = FallbackLLM([openai, anthropic, groq])
+response = client.chat([Message.user("Hello!")])
 \`\`\`
 
 ## Best Practices

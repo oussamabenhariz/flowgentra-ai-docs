@@ -372,11 +372,12 @@ result = agent.run({"input": "What is 2 + 2?"})`} />
         </p>
         <CodeBlock python={`from flowgentra_ai.agent import MemoryAwareAgent
 from flowgentra_ai.memory import ConversationMemory
+from flowgentra_ai.llm import LLM
 
 memory = ConversationMemory(max_messages=50)
 
 agent = MemoryAwareAgent(
-    llm_config="gpt-4",
+    llm=LLM(provider="openai", model="gpt-4o"),
     memory=memory,
     system_prompt="You are a helpful assistant."
 )

@@ -280,31 +280,29 @@ async fn main() -> Result<()> {
 }`,
     },
     python: {
-      signature: `await agent.run(initial_state: dict) -> dict
-await agent.run_with_thread(thread_id: str, initial_state: dict) -> dict`,
-      description: '`run()` is a one-shot execution. `run_with_thread()` persists state between calls using a checkpointer. Both are async — use `await` or `asyncio.run()`.',
+      signature: `await agent.run() -> dict
+await agent.run_with_thread(thread_id: str) -> dict`,
+      description: '`run()` is a one-shot execution. `run_with_thread()` persists state between calls using a checkpointer. Set state fields with `agent.set_custom_field(key, value)` before each call. Both are async.',
       params: [
-        { name: 'initial_state', type: 'dict', description: 'Initial state values. Merged with any previously saved checkpoint.' },
         { name: 'thread_id', type: 'str', description: 'Unique ID for this conversation thread.' },
       ],
       returns: 'dict — final state after execution',
-      example: `from flowgentra_ai.agent import Agent
+      example: `from flowgentra_ai.agent import from_config_path
 from flowgentra_ai.memory import FileCheckpointer
 import asyncio
 
 async def main():
-    checkpointer = FileCheckpointer("./checkpoints")
-    agent = Agent.from_config_path("agent.yaml",
-                                   checkpointer=checkpointer)
+    agent = from_config_path("agent.yaml")
+    agent.set_checkpointer(FileCheckpointer("./checkpoints"))
 
-    # Turn 1
-    await agent.run_with_thread("user-42",
-        {"user_input": "My name is Alice."})
+    # Turn 1 — set state fields before each run
+    agent.set_custom_field("user_input", "My name is Alice.")
+    await agent.run_with_thread("user-42")
 
-    # Turn 2 — state is automatically reloaded
-    result = await agent.run_with_thread("user-42",
-        {"user_input": "What's my name?"})
-    print(result["reply"])  # "Your name is Alice."
+    # Turn 2 — state is automatically reloaded from checkpoint
+    agent.set_custom_field("user_input", "What's my name?")
+    result = await agent.run_with_thread("user-42")
+    print(result.get("reply"))  # "Your name is Alice."
 
 asyncio.run(main())`,
     },
@@ -365,26 +363,26 @@ let router = ConditionalRouter::new("intent_router")
     .add_rule("default",   "slow_path");`,
     },
     python: {
-      signature: `from flowgentra_ai.nodes import RetryNode, TimeoutNode
-
-RetryNode(max_retries=3, backoff_ms=500)
-TimeoutNode(timeout_ms=5000, on_timeout="error")`,
-      description: 'Python exposes RetryNode and TimeoutNode directly. LLMNode, ToolNode, HumanInTheLoop, and ConditionalRouter are configured via `node_type:` in YAML — no Python code needed.',
+      signature: `# Use builder methods — no separate node objects needed
+builder.add_retry_node(name, fn, max_retries=3, backoff_ms=500)
+builder.add_timeout_node(name, fn, timeout_ms=5000, on_timeout="error")`,
+      description: 'Python exposes retry and timeout via `StateGraph` builder methods directly. LLMNode, ToolNode, HumanInTheLoop, and ConditionalRouter are configured via `node_type:` in YAML — no Python code needed.',
       params: [
-        { name: 'RetryNode(max_retries, backoff_ms)', type: 'node', description: 'Retries the wrapped node on failure with exponential backoff.' },
-        { name: 'TimeoutNode(timeout_ms, on_timeout)', type: 'node', description: 'on_timeout: "error" | "skip" | "default_value"' },
+        { name: 'add_retry_node(name, fn, max_retries, backoff_ms)', type: 'builder fn', description: 'Registers fn as a node with exponential backoff retry on failure.' },
+        { name: 'add_timeout_node(name, fn, timeout_ms, on_timeout)', type: 'builder fn', description: 'on_timeout: "error" | "skip" | "default_value"' },
       ],
-      returns: 'Node instance — pass to builder.add_node()',
-      example: `from flowgentra_ai.nodes import RetryNode, TimeoutNode
-from flowgentra_ai.graph import StateGraph
+      returns: 'GraphBuilder (fluent)',
+      example: `from flowgentra_ai.graph import StateGraph
 
 builder = StateGraph(dict)
 
-# Wrap your handler with retry logic
-retry = RetryNode(max_retries=3, backoff_ms=500)
-builder.add_node("fetch", retry.wrap(fetch_data))
+# Retry: 3 attempts with 500ms initial backoff
+builder.add_retry_node("fetch", fetch_data, max_retries=3, backoff_ms=500)
 
-# Or configure via YAML:
+# Or timeout: fail/skip if handler exceeds 5 seconds
+# builder.add_timeout_node("fetch", fetch_data, timeout_ms=5000, on_timeout="skip")
+
+# Or configure entirely via YAML (zero Python code):
 # nodes:
 #   - name: fetch
 #     handler: fetch_data
@@ -481,26 +479,22 @@ async fn main() -> Result<()> {
         { name: 'SummaryMemory(config)', type: 'compressed', description: 'LLM-based summarization of old messages.' },
       ],
       returns: 'Wired automatically when passed to Agent or set in YAML',
-      example: `from flowgentra_ai.agent import Agent
-from flowgentra_ai.memory import ConversationMemory, FileCheckpointer
+      example: `from flowgentra_ai.agent import from_config_path
+from flowgentra_ai.memory import FileCheckpointer
 import asyncio
 
 async def multi_turn():
-    checkpointer = FileCheckpointer("./checkpoints")
-    memory = ConversationMemory(max_messages=20)
+    agent = from_config_path("agent.yaml")
+    agent.set_checkpointer(FileCheckpointer("./checkpoints"))
 
-    agent = Agent.from_config_path("agent.yaml",
-        checkpointer=checkpointer,
-        conversation_memory=memory)
+    # Turn 1 — set state fields then run
+    agent.set_custom_field("user_input", "Hi, I'm Alice.")
+    await agent.run_with_thread("alice")
 
-    # Turn 1
-    r1 = await agent.run_with_thread("alice",
-        {"user_input": "Hi, I'm Alice."})
-
-    # Turn 2
-    r2 = await agent.run_with_thread("alice",
-        {"user_input": "What's my name?"})
-    print(r2["reply"])  # "Your name is Alice."
+    # Turn 2 — state reloaded from checkpoint automatically
+    agent.set_custom_field("user_input", "What's my name?")
+    r2 = await agent.run_with_thread("alice")
+    print(r2.get("reply"))  # "Your name is Alice."
 
 asyncio.run(multi_turn())
 
@@ -1088,10 +1082,12 @@ from flowgentra_ai.graph import StateGraph
 
 init_tracing()  # once at startup
 
+tracer = ExecutionTracer()
+
 builder = StateGraph(dict)
 builder.add_node("step", my_step)
 builder.set_entry_point("step")
-graph = builder.compile()
+graph = builder.compile(tracer=tracer)  # attach tracer at compile time
 
 # Visualize
 print(graph_to_mermaid(graph))
@@ -1099,14 +1095,15 @@ print(graph_to_mermaid(graph))
 #   START --> step
 #   step --> END
 
-# Trace execution
-tracer = ExecutionTracer()
-traced_graph = tracer.wrap(graph)
-result = traced_graph.invoke({"input": "hello"})
+# Run and inspect recorded events
+result = graph.invoke({"input": "hello"})
 
-trace = tracer.last_trace()
-for span in trace.spans:
-    print(f"{span.node}: {span.duration_ms:.1f}ms")`,
+import json
+events = json.loads(tracer.get_events_json())
+for event in events:
+    print(event)  # {"type": "node_start", "node_id": "step", ...}
+
+tracer.clear()  # reset for next run`,
     },
   },
 

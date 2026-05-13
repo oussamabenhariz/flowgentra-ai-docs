@@ -265,14 +265,14 @@ graph = builder.compile()`}
           Attach tools to an LLM so the model can decide when and how to call them.
         </p>
         <CodeBlock
-          python={`from flowgentra_ai.llm import LLM, LLMConfig
+          python={`from flowgentra_ai.llm import LLM
 from flowgentra_ai.tools import CalculatorTool, DuckDuckGoSearchTool
 
-llm = LLM(LLMConfig(
+llm = LLM(
     provider="anthropic",
     model="claude-opus-4-7",
     api_key="YOUR_KEY",
-))
+)
 
 tools = [CalculatorTool(), DuckDuckGoSearchTool()]
 

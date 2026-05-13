@@ -46,6 +46,7 @@ import MiddlewareCompleteGuide from './pages/MiddlewareCompleteGuide'
 import ValidationCompleteGuide from './pages/ValidationCompleteGuide'
 import PerformanceOptimizationGuide from './pages/PerformanceOptimizationGuide'
 import TutorialResearchAssistant from './pages/TutorialResearchAssistant'
+import SkillsGuide from './pages/SkillsGuide'
 
 // Import navigation data structures
 import { navigationStructure, searchCategories, featureHighlights, useCaseNavigation } from './data/navigation'
@@ -81,6 +82,7 @@ export default function App() {
               <Route path="/docs/llm-client"         element={<LLMGuide />} />
               <Route path="/docs/llm-providers"      element={<LLMProviders />} />
               <Route path="/docs/tools"              element={<ToolsGuide />} />
+              <Route path="/docs/skills"             element={<SkillsGuide />} />
               <Route path="/docs/mcp"                element={<MCPGuide />} />
               <Route path="/docs/memory"             element={<MemoryGuide />} />
               <Route path="/docs/rag"                element={<RAGGuide />} />

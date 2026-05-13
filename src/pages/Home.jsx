@@ -38,15 +38,14 @@ async fn main() -> Result<()> {
 }`
 
 const heroPython = `from flowgentra_ai.graph import StateGraph, END
-from flowgentra_ai.llm import LLMConfig, LLM, Message
+from flowgentra_ai.llm import LLM, Message
 from typing import TypedDict
 
 class AgentState(TypedDict):
     query: str
     response: str
 
-config = LLMConfig(provider="openai", model="gpt-4o")
-client = LLM.from_config(config)
+client = LLM(provider="openai", model="gpt-4o")
 
 def answer(state: AgentState) -> AgentState:
     msg = Message.user(state["query"])
@@ -147,6 +146,7 @@ function LanguageChooseScreen({ onChoose }) {
   return (
     <div style={{ minHeight: 'calc(100vh - 60px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 24px', gap: 52 }}>
       <div style={{ textAlign: 'center', maxWidth: 600 }}>
+        <img src="/flowgentra-ai-docs/logo.png" alt="FlowgentraAI" style={{ width: 100, height: 100, objectFit: 'contain', marginBottom: 24 }} />
         <div style={{ display: 'inline-block', background: 'rgba(206,66,43,0.12)', border: '1px solid rgba(206,66,43,0.4)', borderRadius: 20, padding: '4px 14px', fontSize: '0.8rem', color: '#CE422B', marginBottom: 20, fontWeight: 600, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
           Welcome to Flowgentra
         </div>
@@ -199,6 +199,7 @@ export default function Home() {
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 56, alignItems: 'center' }}>
             {/* Left */}
             <div style={{ flex: '1 1 380px', minWidth: 0 }}>
+              <img src="/flowgentra-ai-docs/logo.png" alt="FlowgentraAI" style={{ width: 64, height: 64, objectFit: 'contain', marginBottom: 20, display: 'block' }} />
               <div style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
                 background: 'var(--accent-dim)', border: '1px solid var(--accent)',

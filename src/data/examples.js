@@ -5,25 +5,27 @@ export const examples = [
     title: 'Hello World Agent',
     description: 'The simplest graph — one node that echoes the input. Use this as a blank slate for new projects.',
     rust: `use flowgentra_ai::prelude::*;
+use std::sync::Arc;
 
-#[derive(State, Default)]
+#[derive(State, Default, Clone)]
 struct EchoState {
     input: String,
     output: String,
 }
 
-#[node]
-async fn echo(state: &mut EchoState) -> Result<()> {
-    state.output = format!("Echo: {}", state.input);
-    Ok(())
+async fn echo(state: &EchoState, _ctx: &Context) -> Result<EchoStateUpdate> {
+    Ok(EchoStateUpdate {
+        output: Some(format!("Echo: {}", state.input)),
+        ..Default::default()
+    })
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let graph = StateGraph::<EchoState>::builder()
-        .add_node("echo", echo)
-        .set_entry("echo")
-        .build()?;
+    let graph = StateGraphBuilder::<EchoState>::new()
+        .add_node("echo", Arc::new(NodeFunction::new(echo)))
+        .set_entry_point("echo")
+        .compile()?;
 
     let result = graph.invoke(EchoState {
         input: "Hello, Flowgentra!".into(),
@@ -232,8 +234,8 @@ async fn main() -> Result<()> {
     println!("{}", result.get("reply").unwrap());
     Ok(())
 }`,
-    python: `from flowgentra_ai.agent import Agent, register_handler
-from flowgentra_ai.memory import ConversationMemory, FileCheckpointer
+    python: `from flowgentra_ai.agent import register_handler, from_config_path
+from flowgentra_ai.memory import FileCheckpointer
 import asyncio
 
 @register_handler
@@ -251,23 +253,21 @@ def chat(state: dict) -> dict:
 # memory:
 #   checkpointer: { type: memory }
 #   conversation: { enabled: true, max_messages: 20 }
+# python_handler_module: handlers
 
 async def main():
-    checkpointer = FileCheckpointer("./checkpoints")
-    memory       = ConversationMemory(max_messages=20)
+    agent = from_config_path("config.yaml")
+    agent.set_checkpointer(FileCheckpointer("./checkpoints"))
 
-    agent = Agent.from_config_path("config.yaml",
-        checkpointer=checkpointer,
-        conversation_memory=memory)
-
-    # Turn 1
-    await agent.run_with_thread("alice",
-        {"user_input": "My name is Alice.", "messages": []})
+    # Turn 1 — set state fields before each run
+    agent.set_custom_field("user_input", "My name is Alice.")
+    agent.set_custom_field("messages", [])
+    await agent.run_with_thread("alice")
 
     # Turn 2 — previous state automatically restored
-    result = await agent.run_with_thread("alice",
-        {"user_input": "What's my name?"})
-    print(result["reply"])
+    agent.set_custom_field("user_input", "What's my name?")
+    result = await agent.run_with_thread("alice")
+    print(result.get("reply"))
 
 asyncio.run(main())`,
   },
@@ -307,17 +307,16 @@ async fn main() -> flowgentra_ai::core::error::Result<()> {
     println!();
     Ok(())
 }`,
-    python: `from flowgentra_ai.llm import LLM, LLMConfig, Message
-import asyncio
+    python: `from flowgentra_ai.llm import LLM, Message
+import os
 
-async def stream_response():
-    config = LLMConfig(
-        provider="anthropic",
-        model="claude-3-5-haiku-20241022",
-        api_key="\${ANTHROPIC_API_KEY}",
+def stream_response():
+    client = LLM(
+        "anthropic",
+        "claude-3-5-haiku-20241022",
+        api_key=os.environ["ANTHROPIC_API_KEY"],
         temperature=0.7,
     )
-    client = LLM(config)
 
     messages = [
         Message(role="system",
@@ -327,11 +326,11 @@ async def stream_response():
     ]
 
     print("Story: ", end="", flush=True)
-    async for chunk in client.stream(messages):
+    for chunk in client.chat_stream(messages):
         print(chunk, end="", flush=True)
     print()
 
-asyncio.run(stream_response())`,
+stream_response()`,
   },
 
   // 5 ─────────────────────────────────────────────────────────────────────────
@@ -372,17 +371,14 @@ async fn main() -> flowgentra_ai::core::error::Result<()> {
 }`,
     python: `from flowgentra_ai.llm import LLM, LLMConfig, Message
 from flowgentra_ai.types import ResponseFormat
-import json
+import json, os
 
-config = LLMConfig(
-    provider="openai",
-    model="gpt-4o-mini",
-    api_key="\${OPENAI_API_KEY}",
-    response_format=ResponseFormat.Json,  # forces JSON output
-)
-client = LLM(config)
+config = LLMConfig("openai", "gpt-4o-mini",
+                   api_key=os.environ["OPENAI_API_KEY"])
+config.set_response_format(ResponseFormat.json())  # forces JSON output
+client = LLM.from_config(config)
 
-msg = client.call([
+msg = client.chat([
     Message(role="system",
             content="Extract person info from text as JSON with keys: name, age, occupation."),
     Message(role="user",
@@ -433,8 +429,7 @@ pub async fn call_flaky_api(state: DynState) -> Result<DynState> {
 //     config:
 //       timeout_ms: 3000
 //       on_timeout: skip    # error | skip | default_value`,
-    python: `from flowgentra_ai.nodes import RetryNode, TimeoutNode
-from flowgentra_ai.graph import StateGraph
+    python: `from flowgentra_ai.graph import StateGraph
 import httpx, asyncio
 
 async def fetch_data(state: dict) -> dict:
@@ -445,16 +440,17 @@ async def fetch_data(state: dict) -> dict:
 async def main():
     builder = StateGraph(dict)
 
-    # Wrap fetch_data with retry (3 attempts, exponential backoff)
-    retry = RetryNode(max_retries=3, backoff_ms=500)
-    builder.add_node("fetch", retry.wrap(fetch_data))
+    # add_retry_node wraps the handler with exponential backoff
+    builder.add_retry_node("fetch", fetch_data, max_retries=3, backoff_ms=500)
+    # add_timeout_node enforces a hard deadline
+    # builder.add_timeout_node("fetch", fetch_data, timeout_ms=3000, on_timeout="skip")
     builder.set_entry_point("fetch")
     graph = builder.compile()
 
     result = await graph.ainvoke({"url": "https://example.com"})
     print(result["content"][:100])
 
-# Or configure entirely in YAML:
+# Or configure entirely in YAML (zero Python code needed):
 # nodes:
 #   - name: fetch
 #     handler: fetch_data

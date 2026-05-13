@@ -509,30 +509,32 @@ async fn main() -> Result<()> {
     Ok(())
 }`}
           python={`from flowgentra_ai.graph import StateGraph, END
-from flowgentra_ai.llm import LLMConfig, LLM, Message
-from flowgentra_ai import State
+from flowgentra_ai.llm import LLM, Message
+from typing import TypedDict
+
+class RAGState(TypedDict):
+    question: str
+    context: str
+    answer: str
 
 # Set up LLM and retriever
-client = LLM.from_config(LLMConfig("openai", "gpt-4", api_key="sk-..."))
+client = LLM(provider="openai", model="gpt-4o", api_key="sk-...")
 # retriever = ... (from previous steps)
 
-def retrieve_node(state):
-    query = state["question"]
-    results = retriever.retrieve(query)
+def retrieve_node(state: RAGState) -> RAGState:
+    results = retriever.retrieve(state["question"])
     context = "\\n\\n".join(r.text for r in results)
-    state["context"] = context
-    return state
+    return {**state, "context": context}
 
-def answer_node(state):
+def answer_node(state: RAGState) -> RAGState:
     response = client.chat([
         Message.system(f"Answer based on this context:\\n{state['context']}"),
         Message.user(state["question"]),
     ])
-    state["answer"] = response.content
-    return state
+    return {**state, "answer": response.content}
 
 # Build RAG graph
-builder = StateGraph()
+builder = StateGraph(RAGState)
 builder.add_node("retrieve", retrieve_node)
 builder.add_node("answer", answer_node)
 builder.set_entry_point("retrieve")
@@ -541,7 +543,7 @@ builder.add_edge("answer", END)
 graph = builder.compile()
 
 # Run it
-result = graph.invoke(State({"question": "What is Rust?"}))
+result = graph.invoke({"question": "What is Rust?", "context": "", "answer": ""})
 print(result["answer"])`}
         />
         <p style={{ color: '#8b949e', marginBottom: 16 }}>

@@ -40,7 +40,7 @@ Programmatic construction:
 **Python:**
 \`\`\`python
 from flowgentra_ai.agent import AgentBuilder
-from flowgentra_ai.llm import LLMConfig, LLMProvider
+from flowgentra_ai.llm import LLM
 from typing import TypedDict
 
 class AgentState(TypedDict):
@@ -56,12 +56,7 @@ builder.add_node("respond", respond_node)
 builder.set_entry_point("respond")
 
 # Configure LLM
-llm_config = LLMConfig(
-    provider=LLMProvider.OpenAI,
-    model="gpt-4",
-    temperature=0.7,
-)
-builder.with_llm(llm_config)
+builder.with_llm(LLM(provider="openai", model="gpt-4o", temperature=0.7))
 
 # Build
 agent = builder.build()

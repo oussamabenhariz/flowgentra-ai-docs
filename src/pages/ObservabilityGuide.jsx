@@ -186,9 +186,9 @@ if let Some(u) = usage {
         println!("Estimated cost: ${'{'}:.6{'}'}", cost);
     }
 }`}
-          python={`from flowgentra_ai.llm import LLM, LLMConfig, Message
+          python={`from flowgentra_ai.llm import LLM, Message
 
-client = LLM.from_config(LLMConfig(provider="openai", model="gpt-4o"))
+client = LLM(provider="openai", model="gpt-4o")
 
 response, usage = client.chat_with_usage([
     Message.system("You are a helpful assistant."),

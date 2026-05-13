@@ -71,13 +71,7 @@ export default function Navbar() {
       }}>
         {/* Logo */}
         <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: 6,
-            background: 'var(--accent)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '0.875rem', fontWeight: 700, color: '#fff',
-            transition: 'background 0.2s',
-          }}>F</div>
+          <img src="/flowgentra-ai-docs/logo.png" alt="Flowgentra" style={{ width: 32, height: 32, objectFit: 'contain', borderRadius: 6 }} />
           <span style={{ fontWeight: 700, fontSize: '1rem', color: '#e6edf3', letterSpacing: '-0.02em' }}>
             flowgentra
           </span>

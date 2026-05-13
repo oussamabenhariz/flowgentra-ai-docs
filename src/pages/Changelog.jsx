@@ -10,7 +10,8 @@ const releases = [
       { type: 'fix',  text: 'Python: fix publishing issue — package metadata corrected for PyPI distribution' },
     ],
     rust: `# Cargo.toml
-flowgentra-ai = "0.2.0"`,
+flowgentra-ai = version = "0.2.3"
+`,
     python: `pip install "flowgentra-ai==0.2.0"`,
   },
   {

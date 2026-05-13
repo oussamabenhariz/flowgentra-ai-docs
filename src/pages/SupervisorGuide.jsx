@@ -147,7 +147,7 @@ def make_research_agent():
         state["findings"] = f"Research results for: {state.get('query', '')}"
         return state
 
-    builder = StateGraph()
+    builder = StateGraph(dict)
     builder.add_node("search", search)
     builder.set_entry_point("search")
     builder.add_edge("search", END)
@@ -159,7 +159,7 @@ def make_summarize_agent():
         state["summary"] = f"Summary: {findings[:100]}..."
         return state
 
-    builder = StateGraph()
+    builder = StateGraph(dict)
     builder.add_node("summarize", summarize)
     builder.set_entry_point("summarize")
     builder.add_edge("summarize", END)
@@ -343,7 +343,7 @@ config.set_selector_prompt("""
     - writer: When analysis is complete
     Return: agent name or 'FINISH'
 """)
-config.set_llm_config(LLMConfig("openai", "gpt-4"))
+config.set_llm(LLM(provider="openai", model="gpt-4o"))
 config.set_max_iterations(15)`}
           rust={`let config = SupervisorNodeConfig::new("research-coordinator")
     .with_children(vec!["researcher", "analyst", "writer"])

@@ -20,6 +20,7 @@ const SEARCH_INDEX = [
   { title: 'LLM Integration',            route: '/docs/llm-client',         desc: 'LLM class, all providers, chat(), tool calling, streaming.',        tags: ['llm', 'openai', 'anthropic', 'ollama', 'groq', 'chat'] },
   { title: 'LLM Providers',             route: '/docs/llm-providers',      desc: 'OpenAI, Anthropic, Ollama, Groq, Mistral, Azure, HuggingFace.',    tags: ['provider', 'openai', 'anthropic', 'azure', 'ollama'] },
   { title: 'Tools & MCP',               route: '/docs/tools',              desc: 'ToolDefinition, ToolRegistry, built-in tools, function calling.',   tags: ['tool', 'function', 'calling', 'registry', 'mcp'] },
+  { title: 'Skills',                    route: '/docs/skills',             desc: 'Skill personas, two-phase routing, SkillRegistry, SkillAgent, SKILL.md.', tags: ['skill', 'skillregistry', 'skillagent', 'persona', 'routing', 'allowed-tools'] },
   { title: 'Memory Management',         route: '/docs/memory',             desc: 'ConversationMemory, FileCheckpointer, multi-turn sessions.',        tags: ['memory', 'checkpointer', 'conversation', 'thread', 'session'] },
   { title: 'RAG Pipeline',              route: '/docs/rag',                desc: 'Document loading, embeddings, vector stores, retrieval.',           tags: ['rag', 'vector', 'embeddings', 'retrieval', 'search'] },
   { title: 'Evaluation & Scoring',      route: '/docs/evaluation',         desc: 'hit_rate, mrr, ndcg, output scoring, grading.',                    tags: ['eval', 'metric', 'score', 'hit_rate', 'mrr'] },

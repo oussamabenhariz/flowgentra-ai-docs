@@ -18,13 +18,13 @@ export default function Installation() {
         <>
           <Section title="Cargo (Rust)" subtitle="Add to your Cargo.toml:">
             <CodeBlock forceLang="toml" rust={`[dependencies]
-flowgentra = "0.4"
+flowgentra-ai = "0.2"
 tokio = { version = "1", features = ["full"] }`} />
           </Section>
 
           <Section title="Feature Flags" subtitle="Enable optional features:">
             <CodeBlock forceLang="toml" rust={`[dependencies]
-flowgentra = { version = "0.4", features = [
+flowgentra-ai = { version = "0.2", features = [
     "openai",    # OpenAI integration helpers
     "tracing",   # Tracing + spans for each node
     "yaml",      # YAML config loading
@@ -41,7 +41,7 @@ flowgentra = { version = "0.4", features = [
           </Section>
 
           <Section title="Verify">
-            <CodeBlock forceLang="bash" rust={`cargo add flowgentra
+            <CodeBlock forceLang="bash" rust={`cargo add flowgentra-ai
 cargo build`} />
           </Section>
         </>

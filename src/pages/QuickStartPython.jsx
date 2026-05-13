@@ -52,7 +52,7 @@ pip install "flowgentra-ai[openai,anthropic,tracing]"  # Multiple`} />
 
         <p style={{ ...muted, marginTop: 16 }}>Verify installation:</p>
         <CodeBlock forceLang="bash" rust={`python -c "import flowgentra_ai; print(flowgentra_ai.__version__)"
-# 0.1.5`} />
+# 0.2.6`} />
       </Section>
 
       <Section id="first-agent" title="Your First Agent">
@@ -97,7 +97,7 @@ state["score"] = 42
         <p style={muted}>Connect a real LLM. Flowgentra's <code style={inlineCode}>LLM</code> works with all major providers via a unified API.</p>
         <CodeBlock python={`import os
 from flowgentra_ai.graph import StateGraph, END
-from flowgentra_ai.llm import LLMConfig, LLM, Message
+from flowgentra_ai.llm import LLM, Message
 from typing import TypedDict
 
 os.environ["OPENAI_API_KEY"] = "sk-..."
@@ -106,9 +106,8 @@ class ChatState(TypedDict):
     user_message: str
     response:     str
 
-# Create a reusable LLM
-config = LLMConfig(provider="openai", model="gpt-4o")
-client = LLM.from_config(config)
+# Create a reusable LLM client
+client = LLM(provider="openai", model="gpt-4o")
 
 def call_llm(state: ChatState) -> ChatState:
     messages = [
@@ -134,13 +133,13 @@ print(result["response"])`} />
           To use a different provider, change one line:
         </p>
         <CodeBlock python={`# Anthropic Claude
-config = LLMConfig(provider="anthropic", model="claude-3-5-haiku-20241022", api_key="...")
+client = LLM(provider="anthropic", model="claude-3-5-haiku-20241022", api_key="...")
 
 # Ollama (local — no API key needed)
-config = LLMConfig(provider="ollama", model="llama3.2")
+client = LLM(provider="ollama", model="llama3.2")
 
 # Groq (fast inference)
-config = LLMConfig(provider="groq", model="llama-3.3-70b-versatile", api_key="...")`} />
+client = LLM(provider="groq", model="llama-3.3-70b-versatile", api_key="...")`} />
       </Section>
 
       <Section id="multi-node" title="Multi-Node Graph with Routing">
@@ -148,7 +147,7 @@ config = LLMConfig(provider="groq", model="llama-3.3-70b-versatile", api_key="..
           Real agents have multiple nodes with branching logic. Here's a graph that classifies a question and routes it differently:
         </p>
         <CodeBlock python={`from flowgentra_ai.graph import StateGraph, END
-from flowgentra_ai.llm import LLMConfig, LLM, Message
+from flowgentra_ai.llm import LLM, Message
 from typing import TypedDict
 
 class RouterState(TypedDict):
@@ -156,8 +155,7 @@ class RouterState(TypedDict):
     category:  str   # "technical" | "general"
     answer:    str
 
-config = LLMConfig(provider="openai", model="gpt-4o-mini")
-client = LLM.from_config(config)
+client = LLM(provider="openai", model="gpt-4o-mini")
 
 def classify(state: RouterState) -> RouterState:
     """Classify the question type."""
@@ -209,16 +207,14 @@ print(f"[{result['category']}] {result['answer'][:80]}...")`} />
 
         <p style={{ ...muted, marginBottom: 8 }}><strong style={{ color: '#e6edf3' }}>handlers.py</strong></p>
         <CodeBlock python={`from flowgentra_ai.agent import register_handler
-from flowgentra_ai.llm import LLMConfig, LLM, Message
+from flowgentra_ai.llm import LLM, Message
 
-config = LLMConfig(provider="openai", model="gpt-4o-mini")
-client = LLM.from_config(config)
+client = LLM(provider="openai", model="gpt-4o-mini")
 
-@register_handler("answer_question")
+@register_handler
 def answer_question(state):
     reply = client.chat([Message.user(state.get("query", ""))])
-    state["response"] = reply.content
-    return state`} />
+    return {**state, "response": reply.content}`} />
 
         <p style={{ ...muted, marginTop: 16, marginBottom: 8 }}><strong style={{ color: '#e6edf3' }}>agent.yaml</strong></p>
         <CodeBlock forceLang="yaml" rust={`name: my-agent
