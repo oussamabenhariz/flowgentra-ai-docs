@@ -3,9 +3,22 @@ import CodeBlock from '../components/CodeBlock'
 
 const releases = [
   {
+    version: '0.3.2',
+    date: '2026-07-19',
+    tag: 'latest',
+    changes: [
+      { type: 'fix', text: 'Conversational (skills-aware wrapper) gains the canonical run() method — it was the one agent type still limited to the deprecated execute_input()' },
+      { type: 'fix', text: 'flowgentra_ai.document_loaders was unimportable (loader classes moved to _native.loaders; the wrapper still read _native.rag)' },
+      { type: 'feat', text: 'Regression tests import every public wrapper module and assert the unified run() vocabulary across all seven agent types' },
+    ],
+    rust: `# Cargo.toml
+flowgentra-ai = "0.3.2"`,
+    python: `pip install "flowgentra-ai==0.3.2"`,
+  },
+  {
     version: '0.3.1',
     date: '2026-07-17',
-    tag: 'latest',
+    tag: null,
     changes: [
       { type: 'feat', text: 'Engine merge: config-driven agents now run on the state_graph executor for every valid config — all node types (retry, timeout, evaluation, loop, planner, memory, human-in-the-loop, subgraph, supervisor), per-node MCPs, and RAG configs are compiled by the bridge' },
       { type: 'breaking', text: 'Agent.runtime_mut() returns Option<&mut AgentRuntime>; the legacy runtime is built only as a fallback' },

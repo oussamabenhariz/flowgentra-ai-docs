@@ -49,7 +49,7 @@ export default function QuickStartPython() {
 
         <p style={{ ...muted, marginTop: 16 }}>Verify installation:</p>
         <CodeBlock forceLang="bash" rust={`python -c "import flowgentra_ai; print(flowgentra_ai.__version__)"
-# 0.3.1`} />
+# 0.3.2`} />
       </Section>
 
       <Section id="first-agent" title="Your First Agent">

@@ -18,13 +18,13 @@ export default function Installation() {
         <>
           <Section title="Cargo (Rust)" subtitle="Add to your Cargo.toml:">
             <CodeBlock forceLang="toml" rust={`[dependencies]
-flowgentra-ai = "0.3.1"
+flowgentra-ai = "0.3.2"
 tokio = { version = "1", features = ["full"] }`} />
           </Section>
 
           <Section title="Feature flags" subtitle="Core LLM/graph/tools support needs no features. Flags enable storage backends — compile only what you use:">
             <CodeBlock forceLang="toml" rust={`[dependencies]
-flowgentra-ai = { version = "0.3.1", features = [
+flowgentra-ai = { version = "0.3.2", features = [
     "sqlite",           # SQLite (SQL tools + SqliteCheckpointer)
     "postgres",         # PostgreSQL via sqlx
     "redis-store",      # Redis document store
@@ -70,7 +70,7 @@ cargo build`} />
             </p>
             <CodeBlock forceLang="bash" python={`pip install flowgentra-ai
 # pin a version:
-pip install "flowgentra-ai==0.3.1"`} />
+pip install "flowgentra-ai==0.3.2"`} />
           </Section>
 
           <Section title="Requirements">
