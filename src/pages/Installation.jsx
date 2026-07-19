@@ -18,25 +18,35 @@ export default function Installation() {
         <>
           <Section title="Cargo (Rust)" subtitle="Add to your Cargo.toml:">
             <CodeBlock forceLang="toml" rust={`[dependencies]
-flowgentra-ai = "0.2"
+flowgentra-ai = "0.3.1"
 tokio = { version = "1", features = ["full"] }`} />
           </Section>
 
-          <Section title="Feature Flags" subtitle="Enable optional features:">
+          <Section title="Feature flags" subtitle="Core LLM/graph/tools support needs no features. Flags enable storage backends — compile only what you use:">
             <CodeBlock forceLang="toml" rust={`[dependencies]
-flowgentra-ai = { version = "0.2", features = [
-    "openai",    # OpenAI integration helpers
-    "tracing",   # Tracing + spans for each node
-    "yaml",      # YAML config loading
-    "memory",    # Built-in conversation memory
-]}`} />
+flowgentra-ai = { version = "0.3.1", features = [
+    "sqlite",           # SQLite (SQL tools + SqliteCheckpointer)
+    "postgres",         # PostgreSQL via sqlx
+    "redis-store",      # Redis document store
+    "qdrant",           # Qdrant vector store
+    "pgvector-store",   # Postgres + pgvector
+]}
+
+# Convenience bundles
+# "sql"          = sqlite + postgres + mysql + mssql
+# "nosql"        = mongodb-store + redis-store
+# "all-db"       = sql + nosql + cassandra/elasticsearch/neo4j stores
+# "all-vector"   = pinecone, qdrant, chroma, milvus, weaviate, pgvector,
+#                  redis-vector, elasticsearch-vector, opensearch, upstash,
+#                  astra-db, mongodb-atlas
+# "all-backends" = all-db + all-vector
+# "all-checkpointers" = sqlite + postgres + redis checkpointers`} />
           </Section>
 
           <Section title="Requirements">
             <ul style={{ color: '#8b949e', lineHeight: 2, paddingLeft: 20 }}>
-              <li>Rust <strong style={{ color: '#e6edf3' }}>1.75+</strong></li>
-              <li>Tokio async runtime</li>
-              <li>Cargo 1.75+</li>
+              <li>Recent stable Rust toolchain</li>
+              <li>Tokio async runtime (all graph execution is async)</li>
             </ul>
           </Section>
 
@@ -51,20 +61,23 @@ cargo build`} />
             <CodeBlock forceLang="bash" python={`pip install flowgentra-ai`} />
           </Section>
 
-          <Section title="With extras">
-            <CodeBlock forceLang="bash" python={`# Include all optional integrations
-pip install "flowgentra-ai[all]"
-
-# Or individually
-pip install "flowgentra-ai[openai]"
-pip install "flowgentra-ai[anthropic]"
-pip install "flowgentra-ai[tracing]"`} />
+          <Section title="One wheel, batteries included">
+            <p style={{ color: '#8b949e', marginBottom: 12, fontSize: '0.9375rem' }}>
+              There are no pip extras. The wheel ships the full Rust core —
+              every LLM provider, vector store, and checkpointer backend is
+              already compiled in. Providers are selected at runtime via{' '}
+              <code style={{ color: '#e6edf3' }}>LLMConfig</code>, not at install time.
+            </p>
+            <CodeBlock forceLang="bash" python={`pip install flowgentra-ai
+# pin a version:
+pip install "flowgentra-ai==0.3.1"`} />
           </Section>
 
           <Section title="Requirements">
             <ul style={{ color: '#8b949e', lineHeight: 2, paddingLeft: 20 }}>
-              <li>Python <strong style={{ color: '#e6edf3' }}>3.10+</strong></li>
-              <li>Works in both sync and async contexts</li>
+              <li>Python <strong style={{ color: '#e6edf3' }}>3.9+</strong> (CPython; prebuilt wheels for Linux x86_64/aarch64, macOS x86_64/arm64, Windows x64)</li>
+              <li>Works in both sync and async contexts (<code>invoke()</code> / <code>await ainvoke()</code>)</li>
+              <li>Fully typed: ships <code>py.typed</code> and complete stubs for IDE autocompletion</li>
             </ul>
           </Section>
 

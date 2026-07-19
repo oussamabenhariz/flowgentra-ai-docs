@@ -123,7 +123,7 @@ agent = ZeroShotReAct(
     retries=3,
 )
 
-answer = agent.execute_input("What is the population of France divided by 1000?")
+answer = agent.run("What is the population of France divided by 1000?")
 print(answer)`}
         />
 
@@ -203,9 +203,9 @@ agent = Conversational(
 )
 
 # Multi-turn conversation
-response1 = agent.execute_input("Hi, I'm Alice!")
-response2 = agent.execute_input("What's my name?")  # Remembers "Alice"
-response3 = agent.execute_input("Tell me a joke about programming")`} />
+response1 = agent.run("Hi, I'm Alice!")
+response2 = agent.run("What's my name?")  # Remembers "Alice"
+response3 = agent.run("Tell me a joke about programming")`} />
       </Section>
 
       <Section id="tool-calling" title="ToolCalling">
@@ -245,7 +245,7 @@ agent = ToolCalling(
     tools=[weather],
 )
 
-answer = agent.execute_input("What's the weather in Paris?")`}
+answer = agent.run("What's the weather in Paris?")`}
         />
       </Section>
 
@@ -267,7 +267,7 @@ agent = StructuredChat(
     tools=[calc],
 )
 
-result = agent.execute_input("What is 15% of 2847?")
+result = agent.run("What is 15% of 2847?")
 # LLM outputs: {"action":"calculator","action_input":"0.15 * 2847"}
 # Then:        {"action":"Final Answer","action_input":"427.05"}`}
         />
@@ -291,7 +291,7 @@ agent = SelfAskWithSearch(
     tools=[search],
 )
 
-answer = agent.execute_input(
+answer = agent.run(
     "Who was the maternal grandfather of George Washington?"
 )
 print(answer)  # "Joseph Ball"
@@ -329,7 +329,7 @@ agent = ReactDocstore(
     tools=[search_tool, lookup_tool],
 )
 
-answer = agent.execute_input(
+answer = agent.run(
     "What is the elevation range of the High Plains?"
 )
 # Action: Search[High Plains (United States)]

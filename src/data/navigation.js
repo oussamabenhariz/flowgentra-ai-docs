@@ -17,7 +17,7 @@ export const navigationStructure = [
         { label: 'Python', route: '/docs/quickstart-python' },
         { label: 'Rust', route: '/docs/quickstart-rust' },
       ]},
-      { id: 'first-agent', label: 'Build Your First Agent', route: '/docs/first-agent', section: 'tutorials' },
+      { id: 'first-agent', label: 'Build Your First Agent', route: '/docs/getting-started', section: 'tutorials' },
     ]
   },
 
@@ -58,8 +58,8 @@ export const navigationStructure = [
     items: [
       { id: 'basic-agents', label: 'Predefined Agents', route: '/docs/predefined-agents', description: 'ZeroShotReAct, FewShotReAct, Conversational, ToolCalling, StructuredChat, SelfAskWithSearch, ReactDocstore' },
       { id: 'multi-agent', label: 'Multi-Agent Systems', route: '/docs/supervisor', description: 'Orchestrate teams of agents' },
-      { id: 'supervision', label: 'Supervision & Planning', route: '/docs/multi-agent', description: 'Coordination strategies' },
-      { id: 'custom-agents', label: 'Custom Agent Types', route: '/docs/custom-agents', section: 'guides' },
+      { id: 'supervision', label: 'Supervision & Planning', route: '/docs/supervisor', description: 'Coordination strategies' },
+      { id: 'custom-agents', label: 'Custom Agent Types', route: '/docs/agents', section: 'guides' },
     ]
   },
 
@@ -85,89 +85,41 @@ export const navigationStructure = [
     icon: 'book',
     description: 'Complete API documentation for all modules',
     items: [
-      { id: 'core-api', label: 'Core APIs', submenu: [
+      { id: 'core-api', label: 'Core', submenu: [
         { label: 'StateGraph', route: '/docs/api/state-graph', section: 'api' },
-        { label: 'State & Reducers', route: '/docs/api/derive-state', section: 'api' },
-        { label: 'Agent Builder', route: '/docs/api/agent-builder', section: 'api' },
-        { label: 'Agents', route: '/docs/api/agents', section: 'api' },
-      ]},
-      { id: 'llm-api', label: 'LLM Module', submenu: [
-        { label: 'LLMs', route: '/docs/api/llm-clients', section: 'api' },
-        { label: 'Message Types', route: '/docs/api/messages', section: 'api' },
-        { label: 'LLM Provider Config', route: '/docs/api/llm-config', section: 'api' },
-      ]},
-      { id: 'tools-api', label: 'Tools Module', submenu: [
-        { label: 'Tool Registry', route: '/docs/api/tool-registry', section: 'api' },
-        { label: 'Tool Node', route: '/docs/api/tool-node', section: 'api' },
-        { label: 'Built-in Tools', route: '/docs/api/builtin-tools', section: 'api' },
-      ]},
-      { id: 'nodes-api', label: 'Node Types', submenu: [
-        { label: 'Function Node', route: '/docs/api/function-node', section: 'api' },
+        { label: 'Execution Control', route: '/docs/api/execution', section: 'api' },
         { label: 'Built-in Nodes', route: '/docs/api/builtin-nodes', section: 'api' },
-        { label: 'Advanced Nodes', route: '/docs/api/advanced-nodes', section: 'api' },
-        { label: 'Planner Node', route: '/docs/api/planner-node', section: 'api' },
-        { label: 'Evaluation Node', route: '/docs/api/eval-node', section: 'api' },
+        { label: 'Advanced Nodes', route: '/docs/api/nodes', section: 'api' },
       ]},
-      { id: 'memory-api', label: 'Memory Module', submenu: [
-        { label: 'Memory Interfaces', route: '/docs/api/memory-types', section: 'api' },
-        { label: 'Conversation Memory', route: '/docs/api/conversation-memory', section: 'api' },
-        { label: 'Token Buffer Memory', route: '/docs/api/token-buffer', section: 'api' },
-        { label: 'Memory-Aware Agent', route: '/docs/api/memory-aware-agent', section: 'api' },
+      { id: 'config-api', label: 'Agents & Config', submenu: [
+        { label: 'Handlers & Config', route: '/docs/api/handlers-config', section: 'api' },
+        { label: 'Predefined Agents', route: '/docs/api/agents', section: 'api' },
+        { label: 'Security Model', route: '/docs/api/security', section: 'api' },
       ]},
-      { id: 'checkpoint-api', label: 'Checkpointing', submenu: [
-        { label: 'Checkpointer Interface', route: '/docs/api/checkpointer', section: 'api' },
-        { label: 'File Checkpointer', route: '/docs/api/file-checkpointer', section: 'api' },
-        { label: 'Async Checkpointers', route: '/docs/api/async-checkpointers', section: 'api' },
+      { id: 'llm-api', label: 'LLMs', submenu: [
+        { label: 'LLMs & Providers', route: '/docs/api/llm', section: 'api' },
       ]},
-      { id: 'rag-api', label: 'RAG Module', submenu: [
-        { label: 'RAG Config', route: '/docs/api/rag-config', section: 'api' },
-        { label: 'RAG Evaluator', route: '/docs/api/rag-eval', section: 'api' },
-        { label: 'Vector Store', route: '/docs/api/vector-store', section: 'api' },
-        { label: 'Document Loaders', route: '/docs/api/document-loaders', section: 'api' },
-        { label: 'Text Splitters', route: '/docs/api/text-splitters', section: 'api' },
-        { label: 'Rerankers', route: '/docs/api/rerankers', section: 'api' },
+      { id: 'tools-api', label: 'Tools', submenu: [
+        { label: 'Tool Registry & Built-ins', route: '/docs/api/tools', section: 'api' },
       ]},
-      { id: 'evaluation-api', label: 'Evaluation Module', submenu: [
-        { label: 'Evaluation Config', route: '/docs/api/eval-config', section: 'api' },
-        { label: 'Evaluation Framework', route: '/docs/api/evaluation', section: 'api' },
-        { label: 'Metrics', route: '/docs/api/metrics', section: 'api' },
+      { id: 'memory-api', label: 'Memory & Checkpointing', submenu: [
+        { label: 'Memory', route: '/docs/api/memory', section: 'api' },
       ]},
-      { id: 'config-api', label: 'Configuration', submenu: [
-        { label: 'YAML Config', route: '/docs/api/yaml-config', section: 'api' },
-        { label: 'Config Structure', route: '/docs/api/config-structure', section: 'api' },
-        { label: 'Handler Registration', route: '/docs/api/register-handler', section: 'api' },
+      { id: 'rag-api', label: 'RAG', submenu: [
+        { label: 'RAG Core', route: '/docs/api/rag', section: 'api' },
+        { label: 'Document Loaders', route: '/docs/api/data-loading', section: 'api' },
+        { label: 'Text Splitters', route: '/docs/api/text-processing', section: 'api' },
+        { label: 'Rerankers', route: '/docs/api/search-ranking', section: 'api' },
+      ]},
+      { id: 'evaluation-api', label: 'Evaluation', submenu: [
+        { label: 'Evaluation & Metrics', route: '/docs/api/evaluation', section: 'api' },
       ]},
       { id: 'multi-agent-api', label: 'Multi-Agent', submenu: [
         { label: 'Supervisor', route: '/docs/api/supervisor', section: 'api' },
-        { label: 'Agent Router', route: '/docs/api/agent-router', section: 'api' },
-        { label: 'Routing Strategies', route: '/docs/api/routing', section: 'api' },
+        { label: 'Supervision Patterns', route: '/docs/api/multi-agent', section: 'api' },
       ]},
-      { id: 'mcp-api', label: 'MCP Integration', submenu: [
-        { label: 'MCP Client Config', route: '/docs/api/mcp-config', section: 'api' },
-        { label: 'MCP Connection Types', route: '/docs/api/mcp-connection', section: 'api' },
-      ]},
-      { id: 'database-api', label: 'Database Module', submenu: [
-        { label: 'Database Backends', route: '/docs/api/databases', section: 'api' },
-        { label: 'SQL Database', route: '/docs/api/sql-db', section: 'api' },
-        { label: 'Document Store', route: '/docs/api/doc-store', section: 'api' },
-      ]},
-      { id: 'observability-api', label: 'Observability Module', submenu: [
-        { label: 'Tracer & Visualization', route: '/docs/api/observability', section: 'api' },
-        { label: 'Graph Visualization', route: '/docs/api/visualization', section: 'api' },
-      ]},
-      { id: 'middleware-api', label: 'Middleware System', submenu: [
-        { label: 'Middleware Interface', route: '/docs/api/middleware', section: 'api' },
-        { label: 'Built-in Middleware', route: '/docs/api/middleware-builtins', section: 'api' },
-      ]},
-      { id: 'plugins-api', label: 'Plugin System', submenu: [
-        { label: 'Plugin Registry', route: '/docs/api/plugins', section: 'api' },
-      ]},
-      { id: 'error-api', label: 'Error Handling', submenu: [
-        { label: 'Error Types', route: '/docs/api/errors', section: 'api' },
-      ]},
-      { id: 'utils-api', label: 'Utilities', submenu: [
-        { label: 'Utility Functions', route: '/docs/api/utils', section: 'api' },
-        { label: 'Channels', route: '/docs/api/channels', section: 'api' },
+      { id: 'observability-api', label: 'Observability', submenu: [
+        { label: 'Tracing & Visualization', route: '/docs/api/observability', section: 'api' },
       ]},
     ]
   },
@@ -181,14 +133,11 @@ export const navigationStructure = [
       { id: 'examples', label: 'Code Examples', route: '/docs/examples', description: 'Copy-paste ready code' },
       { id: 'tutorials', label: 'End-to-End Tutorials', submenu: [
         { label: '🔬 Research Assistant', route: '/docs/tutorials/research-assistant' },
-        { label: 'Build a Chatbot', route: '/docs/tutorials/chatbot', section: 'tutorials' },
-        { label: 'Multi-Agent Research', route: '/docs/tutorials/multi-agent', section: 'tutorials' },
-        { label: 'RAG Agent', route: '/docs/tutorials/rag-agent', section: 'tutorials' },
       ]},
       { id: 'patterns', label: 'Production Patterns', submenu: [
-        { label: 'Graph Patterns', route: '/docs/guides/graph-patterns', section: 'guides' },
-        { label: 'Scaling Agents', route: '/docs/guides/scaling', section: 'guides' },
-        { label: 'Error Handling Patterns', route: '/docs/guides/error-patterns', section: 'guides' },
+        { label: 'Graph Patterns', route: '/docs/graphs', section: 'guides' },
+        { label: 'Scaling Agents', route: '/docs/performance', section: 'guides' },
+        { label: 'Error Handling Patterns', route: '/docs/error-handling', section: 'guides' },
       ]},
     ]
   },
@@ -201,9 +150,8 @@ export const navigationStructure = [
     items: [
       { id: 'best-practices', label: 'Best Practices', route: '/docs/best-practices' },
       { id: 'faq', label: 'FAQ', route: '/docs/faq' },
-      { id: 'troubleshooting', label: 'Troubleshooting Guide', route: '/docs/troubleshooting', section: 'guides' },
+      { id: 'troubleshooting', label: 'Troubleshooting Guide', route: '/docs/faq', section: 'guides' },
       { id: 'changelog', label: 'Changelog', route: '/docs/changelog' },
-      { id: 'contributing', label: 'Contributing Guide', route: '/docs/contributing', section: 'guides' },
     ]
   },
 ]

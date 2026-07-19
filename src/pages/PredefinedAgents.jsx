@@ -205,7 +205,7 @@ agent = ZeroShotReAct(
     retries=2,
 )
 
-answer = agent.execute_input("What is 15% of the population of France?")`}
+answer = agent.run("What is 15% of the population of France?")`}
         />
         <InfoBox>
           <strong style={{ color: '#e6edf3' }}>Prompt format:</strong> the system prompt instructs the LLM to emit <code>&lt;action&gt;tool_name(args)&lt;/action&gt;</code> for tool calls and <code>&lt;answer&gt;...&lt;/answer&gt;</code> for final answers.  <code>parse_action_tags()</code> and <code>parse_answer_tags()</code> in <code>graph_nodes.rs</code> handle extraction.
@@ -299,8 +299,8 @@ agent = Conversational(
     memory_steps=20,
 )
 
-r1 = agent.execute_input("Hi, I can't log in")
-r2 = agent.execute_input("My email is alice@example.com")
+r1 = agent.run("Hi, I can't log in")
+r2 = agent.run("My email is alice@example.com")
 # r2: agent remembers r1 context`}
         />
       </Section>
@@ -364,7 +364,7 @@ agent = ToolCalling(
     tools=[weather],
 )
 
-answer = agent.execute_input("What's the weather in Paris?")`}
+answer = agent.run("What's the weather in Paris?")`}
         />
       </Section>
 
@@ -416,7 +416,7 @@ agent = StructuredChat(
     tools=[calc],
 )
 
-result = agent.execute_input("What is 15% of 2847?")`}
+result = agent.run("What is 15% of 2847?")`}
         />
         <InfoBox>
           The system prompt is injected with the tool list via <code>{`{tools}`}</code> and <code>{`{tool_names}`}</code> placeholders at graph build time. <code>parse_structured_action()</code> in <code>graph_nodes.rs</code> extracts the JSON from the last fenced code block (or bare JSON).
@@ -477,7 +477,7 @@ agent = SelfAskWithSearch(
     tools=[search],
 )
 
-answer = agent.execute_input(
+answer = agent.run(
     "Who was the maternal grandfather of George Washington?"
 )
 print(answer)  # "Joseph Ball"`}
@@ -556,7 +556,7 @@ agent = ReactDocstore(
     tools=[search_tool, lookup_tool],
 )
 
-answer = agent.execute_input(
+answer = agent.run(
     "What is the elevation range of the High Plains?"
 )
 print(answer)  # "1,800 to 7,000 ft (550 to 2,130 m)."`}
@@ -628,7 +628,7 @@ print(answer)  # "1,800 to 7,000 ft (550 to 2,130 m)."`}
                 ['.with_param(key, value)', 'Rust builder only', 'Add arbitrary custom parameters to config'],
                 ['.build_graph()', 'Rust → GraphBasedAgent', 'Compile the agent graph. Call execute_input(str) on the result.'],
                 ['.build()', 'Rust → Box<dyn Agent>', 'Compile to a trait object (sync process() only; use build_graph() for async)'],
-                ['agent.execute_input(str)', '→ String', 'Run the compiled graph with a text input, return the final answer string'],
+                ['agent.run(str) / agent.execute_input(str)', 'Python / Rust → String', 'Run the compiled graph with a text input, return the final answer. Python: run() is canonical (execute_input() deprecated); Rust: execute_input().'],
               ].map(([method, type_, desc], i, arr) => (
                 <tr key={method} style={{ background: i % 2 === 0 ? 'transparent' : '#0d1117' }}>
                   <td style={{ padding: '8px 12px', borderBottom: i < arr.length - 1 ? '1px solid #21262d' : 'none', color: '#79c0ff', fontFamily: 'monospace', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>{method}</td>
@@ -678,7 +678,7 @@ agent = ToolCalling(
     retries=3,
 )
 
-answer = agent.execute_input("Your question here")`}
+answer = agent.run("Your question here")`}
         />
       </Section>
     </DocLayout>

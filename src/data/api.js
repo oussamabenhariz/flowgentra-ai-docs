@@ -6,28 +6,39 @@ export const apiEntries = [
     name: 'StateGraph',
     summary: 'Core graph builder. Define nodes, edges, and entry points to compose your agent workflow.',
     rust: {
-      signature: 'StateGraph::<S>::builder() -> GraphBuilder<S>',
-      description: 'Creates a typed graph builder. `S` must implement the `State` trait (use `#[derive(State)]`). For config-driven agents, prefer `from_config_path()` instead.',
+      signature: 'StateGraph::<S>::builder() -> StateGraphBuilder<S>',
+      description: 'Creates a typed graph builder. `S` must implement the `State` trait (use `#[derive(State)]`). Nodes are `Arc<dyn Node<S>>` — wrap async closures with `FunctionNode::new`. Finish by routing an edge to `END` and calling `.compile()`. For config-driven agents, prefer `from_config_path()` instead.',
       params: [
         { name: 'S', type: 'impl State', description: 'Generic state type shared across all nodes.' },
       ],
-      returns: 'GraphBuilder<S>',
-      example: `use flowgentra_ai::prelude::*;
+      returns: 'StateGraphBuilder<S> — chain .add_node() / .add_edge() / .set_entry_point(), then .compile()',
+      example: `use std::sync::Arc;
+use flowgentra_ai::prelude::*;
+use flowgentra_ai::core::state_graph::{FunctionNode, Node, StateGraph, END};
 
-#[derive(State, Default, Clone)]
+#[derive(State, Default, Clone, serde::Serialize, serde::Deserialize)]
 struct MyState {
     #[reducer(Append)]
     messages: Vec<String>,
     turn: u32,
 }
 
+let greet: Arc<dyn Node<MyState>> = Arc::new(FunctionNode::new(
+    "greet",
+    |_state: &MyState, _ctx: &Context| Box::pin(async move {
+        let mut up = MyStateUpdate::default();
+        up.messages = Some(vec!["hello".into()]);
+        Ok(up)
+    }),
+));
+
 let graph = StateGraph::<MyState>::builder()
-    .add_node("greet",   greet_node)
-    .add_node("respond", respond_node)
-    .add_edge("greet",   "respond")
-    .set_entry("greet")
-    .set_finish("respond")
-    .build()?;`,
+    .add_node("greet", greet)
+    .set_entry_point("greet")
+    .add_edge("greet", END)
+    .compile()?;
+
+let final_state = graph.invoke(MyState::default()).await?;`,
     },
     python: {
       signature: 'StateGraph(state_schema) -> GraphBuilder',
@@ -249,29 +260,26 @@ asyncio.run(main())`,
     id: 'agent-run',
     topic: 'memory',
     name: 'agent.run / agent.run_with_thread',
-    summary: 'Execute the agent. Use run() for stateless execution, run_with_thread() for persistent multi-turn conversations with checkpointing.',
+    summary: 'Execute the agent. run() is one-shot; run_with_thread() checkpoints under a thread ID so multi-turn conversations resume where they left off.',
     rust: {
-      signature: `agent.run() -> Result<DynState>
-agent.run_with_thread(thread_id: &str) -> Result<DynState>`,
-      description: '`run()` executes the graph once. `run_with_thread()` loads the last checkpoint for `thread_id` before execution and saves state after each node — enabling multi-turn conversations. Requires a checkpointer to be set (via config or `with_checkpointer()`).',
+      signature: `agent.run() -> Result<DynState>          // async
+agent.run_with_thread(thread_id: &str) -> Result<DynState>  // async`,
+      description: 'Since 0.3.1, config-driven agents execute on the state_graph engine: every valid config compiles onto the same executor that powers StateGraph, gaining budgets, cancellation, and atomic checkpointing. `run_with_thread()` checkpoints each step under `thread_id` (in-memory by default), so calling it again with the same ID resumes the conversation. The legacy `AgentRuntime` is deprecated and only built as a fallback; `runtime_mut()` now returns `Option`.',
       params: [
         { name: 'thread_id', type: '&str', description: 'Unique identifier for a conversation thread. Same ID resumes the conversation.' },
       ],
       returns: 'Result<DynState> — the final state after execution',
       example: `use flowgentra_ai::prelude::*;
-use flowgentra_ai::core::memory::MemoryCheckpointer;
-use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let mut agent = from_config_path("agent.yaml")?
-        .with_checkpointer(Arc::new(MemoryCheckpointer::new()));
+    let mut agent = from_config_path("agent.yaml")?;
 
     // Turn 1
     agent.state.set("user_input", serde_json::json!("My name is Alice."));
     agent.run_with_thread("thread-42").await?;
 
-    // Turn 2 — previous state is reloaded automatically
+    // Turn 2 — previous state is reloaded from the thread's checkpoint
     agent.state.set("user_input", serde_json::json!("What's my name?"));
     let result = agent.run_with_thread("thread-42").await?;
     println!("{}", result.get("reply").unwrap());
@@ -280,31 +288,26 @@ async fn main() -> Result<()> {
 }`,
     },
     python: {
-      signature: `await agent.run() -> dict
-await agent.run_with_thread(thread_id: str) -> dict`,
-      description: '`run()` is a one-shot execution. `run_with_thread()` persists state between calls using a checkpointer. Set state fields with `agent.set_custom_field(key, value)` before each call. Both are async.',
+      signature: `agent.run() -> dict
+agent.run_with_thread(thread_id: str) -> dict
+agent.set_state(key, value) -> None`,
+      description: 'Both calls are synchronous (the GIL is released while the Rust engine runs). Set state fields with `agent.set_state(key, value)` before each call; read the final state from the returned dict or `agent.state`. For agents created via `Agent.create(...)`, use `run_with_input("...")` instead.',
       params: [
         { name: 'thread_id', type: 'str', description: 'Unique ID for this conversation thread.' },
       ],
       returns: 'dict — final state after execution',
-      example: `from flowgentra_ai.agent import from_config_path
-from flowgentra_ai.memory import FileCheckpointer
-import asyncio
+      example: `from flowgentra_ai.agent import Agent
 
-async def main():
-    agent = from_config_path("agent.yaml")
-    agent.set_checkpointer(FileCheckpointer("./checkpoints"))
+agent = Agent.from_config_path("agent.yaml")
 
-    # Turn 1 — set state fields before each run
-    agent.set_custom_field("user_input", "My name is Alice.")
-    await agent.run_with_thread("user-42")
+# Turn 1 — set state fields before each run
+agent.set_state("user_input", "My name is Alice.")
+agent.run_with_thread("user-42")
 
-    # Turn 2 — state is automatically reloaded from checkpoint
-    agent.set_custom_field("user_input", "What's my name?")
-    result = await agent.run_with_thread("user-42")
-    print(result.get("reply"))  # "Your name is Alice."
-
-asyncio.run(main())`,
+# Turn 2 — state is reloaded from the thread's checkpoint
+agent.set_state("user_input", "What's my name?")
+result = agent.run_with_thread("user-42")
+print(result.get("reply"))  # "Your name is Alice."`,
     },
   },
 
@@ -466,37 +469,38 @@ async fn main() -> Result<()> {
     },
     python: {
       signature: `from flowgentra_ai.memory import (
-    ConversationMemory,
-    FileCheckpointer,
-    TokenBufferMemory,
-    SummaryMemory,
+    ConversationMemory, FileCheckpointer,
+    SqliteCheckpointer, PostgresCheckpointer, RedisCheckpointer,
+    AsyncSqliteCheckpointer, AsyncPostgresCheckpointer, AsyncRedisCheckpointer,
+    TokenBufferMemory, SummaryMemory,
 )`,
-      description: 'Python exposes the same memory types. Configure in YAML under `memory:` to avoid any Python setup code.',
+      description: 'Python exposes the full checkpointer family: file, SQLite, Postgres, and Redis — each with a sync and an async variant — plus the conversation-memory types. Config-driven agents wire memory declaratively via the YAML `memory:` section; graphs take a checkpointer via `builder.set_checkpointer(path)` / `set_sqlite_checkpointer(url)`. For multi-turn chat, `MemoryAwareAgent` manages history per thread with `run(input)` / `set_thread_id()`.',
       params: [
         { name: 'ConversationMemory', type: 'in-process', description: 'In-memory message history per thread.' },
-        { name: 'FileCheckpointer(path)', type: 'persistent', description: 'Disk-backed state persistence.' },
+        { name: 'FileCheckpointer(path)', type: 'persistent', description: 'Disk-backed state persistence (atomic writes).' },
+        { name: 'SqliteCheckpointer(url)', type: 'persistent', description: 'Durable transactional checkpoints in SQLite.' },
+        { name: 'AsyncSqliteCheckpointer / AsyncPostgresCheckpointer / AsyncRedisCheckpointer', type: 'async', description: 'Async variants of the durable checkpointers.' },
         { name: 'TokenBufferMemory(max_tokens)', type: 'buffer', description: 'Token-bounded message history.' },
         { name: 'SummaryMemory(config)', type: 'compressed', description: 'LLM-based summarization of old messages.' },
       ],
-      returns: 'Wired automatically when passed to Agent or set in YAML',
-      example: `from flowgentra_ai.agent import from_config_path
-from flowgentra_ai.memory import FileCheckpointer
-import asyncio
+      returns: 'Wired automatically when set in YAML (agents) or on the builder (graphs)',
+      example: `from flowgentra_ai.agent import Agent
 
-async def multi_turn():
-    agent = from_config_path("agent.yaml")
-    agent.set_checkpointer(FileCheckpointer("./checkpoints"))
+# Config agents: checkpointing is declared in agent.yaml (memory: section)
+agent = Agent.from_config_path("agent.yaml")
 
-    # Turn 1 — set state fields then run
-    agent.set_custom_field("user_input", "Hi, I'm Alice.")
-    await agent.run_with_thread("alice")
+# Turn 1 — set state fields then run (sync; the engine releases the GIL)
+agent.set_state("user_input", "Hi, I'm Alice.")
+agent.run_with_thread("alice")
 
-    # Turn 2 — state reloaded from checkpoint automatically
-    agent.set_custom_field("user_input", "What's my name?")
-    r2 = await agent.run_with_thread("alice")
-    print(r2.get("reply"))  # "Your name is Alice."
+# Turn 2 — state reloaded from the thread's checkpoint
+agent.set_state("user_input", "What's my name?")
+r2 = agent.run_with_thread("alice")
+print(r2.get("reply"))  # "Your name is Alice."
 
-asyncio.run(multi_turn())
+# Graphs: durable checkpointing on the builder
+# builder.set_checkpointer("./checkpoints")          # file-backed
+# builder.set_sqlite_checkpointer("sqlite://state.db")  # SQLite
 
 # Or configure entirely in YAML:
 # memory:
@@ -608,7 +612,7 @@ from flowgentra_ai.llm import LLM
 
 llm = LLM(provider="openai", model="gpt-4o")
 agent = ZeroShotReAct(name="my-agent", llm=llm, retries=2)  # → GraphBasedAgent-like
-result = agent.execute_input("Your question")               # → str
+result = agent.run("Your question")               # → str
 
 # ── AgentBuilder (for advanced configuration) ────────────────────────────────
 from flowgentra_ai.agent import AgentBuilder, AgentType, ToolSpec
@@ -634,7 +638,7 @@ agent = (
         { name: 'tools', type: 'List[ToolSpec]', description: 'List of ToolSpec objects. ToolSpec(name, desc) then .add_parameter(name, type) / .set_required(name).' },
         { name: 'memory_steps', type: 'int | None', description: 'Keep last n conversation turns in state. Primarily used by Conversational.' },
         { name: '.build_graph()', type: '→ GraphBasedAgent', description: 'AgentBuilder only: compile and return GraphBasedAgent.' },
-        { name: 'agent.execute_input(str)', type: '→ str', description: 'Run agent. Typed constructors expose this directly; so does GraphBasedAgent from AgentBuilder.' },
+        { name: 'agent.run(str)', type: '→ str', description: 'Run agent. Typed constructors expose this directly; so does GraphBasedAgent from AgentBuilder.' },
       ],
       returns: 'GraphBasedAgent',
       example: `from flowgentra_ai.agent import ZeroShotReAct, FewShotReAct, ToolCalling, StructuredChat, SelfAskWithSearch, ReactDocstore, ToolSpec
@@ -652,7 +656,7 @@ agent = ZeroShotReAct(
     tools=[search],
     retries=2,
 )
-print(agent.execute_input("What is the capital of Japan?"))
+print(agent.run("What is the capital of Japan?"))
 
 # ── FewShotReAct — embed examples in system_prompt ────────────────────────────
 classifier = FewShotReAct(
@@ -685,21 +689,21 @@ sc_agent = StructuredChat(
     llm=LLM(provider="openai", model="gpt-4o"),
     tools=[calc],
 )
-print(sc_agent.execute_input("What is 15% of 2847?"))
+print(sc_agent.run("What is 15% of 2847?"))
 
 # ── SelfAskWithSearch — decompose questions ───────────────────────────────────
 sa_agent = SelfAskWithSearch(
     name="researcher",
     llm=LLM(provider="openai", model="gpt-4o"),
 )
-print(sa_agent.execute_input("Who was the maternal grandfather of George Washington?"))
+print(sa_agent.run("Who was the maternal grandfather of George Washington?"))
 
 # ── ReactDocstore — Search + Lookup loop ──────────────────────────────────────
 rd_agent = ReactDocstore(
     name="doc-agent",
     llm=LLM(provider="openai", model="gpt-4o"),
 )
-print(rd_agent.execute_input("What is the elevation range of the High Plains?"))`,
+print(rd_agent.run("What is the elevation range of the High Plains?"))`,
     },
   },
 
@@ -1980,6 +1984,362 @@ memory:
   conversation:
     enabled: true
     max_messages: 20`,
+    },
+  },
+
+  // ─── EXECUTION CONTROL: BUDGETS & CANCELLATION ───────────────────────────────
+  {
+    id: 'budgets-cancellation',
+    topic: 'execution',
+    name: 'Budgets & Cancellation',
+    summary: 'Bound a run by steps, wall-clock time, total tokens, or estimated USD cost — and cancel cooperatively. Breaches abort with a typed error before the next node.',
+    rust: {
+      signature: `builder.set_max_steps(n: usize)                       // default 1000
+builder.set_max_duration(d: Duration)                 // WallClockExceeded
+builder.set_max_tokens(n: u64)                        // TokenBudgetExceeded
+builder.set_max_cost(usd: f64)                        // CostBudgetExceeded
+builder.set_cancel_flag(flag: Arc<AtomicBool>)        // Cancelled`,
+      description: 'All budgets are checked between nodes (and between parallel waves). The token budget reads the cumulative `_token_usage.total_tokens` state field; the cost budget reads `_cost_usd`, which `record_usage_with_cost(state, usage, model)` accumulates per LLM call at that call\\u2019s model price — so runs that mix models are priced correctly. Prices come from the built-in `model_pricing(model)` table; override or add models with `set_model_price(model, input_per_million, output_per_million)`. Unpriced models count as $0 and log one warning. Config-driven agents set the same limits declaratively via the `budget:` section.',
+      params: [
+        { name: 'd', type: 'std::time::Duration', description: 'Wall-clock limit for one invocation.' },
+        { name: 'n', type: 'u64', description: 'Cumulative total-token limit across all LLM calls in the run.' },
+        { name: 'usd', type: 'f64', description: 'Cumulative estimated-cost limit in USD.' },
+        { name: 'flag', type: 'Arc<AtomicBool>', description: 'Set to true from any thread to stop before the next node.' },
+      ],
+      returns: 'Builder (chainable). Breach: Err(StateGraphError::{WallClockExceeded, TokenBudgetExceeded, CostBudgetExceeded, Cancelled})',
+      example: `use std::time::Duration;
+use flowgentra_ai::core::{set_model_price, record_usage_with_cost};
+
+// Price a custom model so the cost budget can count it
+set_model_price("my-finetune", 1.0, 3.0); // $/1M input, $/1M output
+
+let graph = StateGraph::<MyState>::builder()
+    .add_node("work", work_node)   // calls record_usage_with_cost(...)
+    .set_entry_point("work")
+    .add_edge("work", END)
+    .set_max_duration(Duration::from_secs(60))
+    .set_max_tokens(100_000)
+    .set_max_cost(2.50)
+    .compile()?;
+
+// YAML equivalent for config-driven agents:
+// budget:
+//   max_tokens: 100000
+//   max_cost_usd: 2.5
+//   max_duration_secs: 60
+// model_pricing:
+//   my-finetune: { input_per_million: 1.0, output_per_million: 3.0 }`,
+    },
+    python: {
+      signature: `builder.set_max_steps(n: int)          # validated 1–10000
+builder.set_max_duration(seconds: float)
+builder.set_max_tokens(n: int)
+builder.set_max_cost(usd: float)`,
+      description: 'Same semantics as Rust; every budget breach raises `WorkflowTimeoutError`. Ctrl+C cancels a running `invoke()` cleanly (the engine polls for signals and raises `KeyboardInterrupt`-derived errors). Price overrides for the cost budget: `from flowgentra_ai._native import llm` then `llm.py_set_model_price(model, input_per_million, output_per_million)`.',
+      params: [
+        { name: 'seconds', type: 'float', description: 'Wall-clock limit for one invocation.' },
+        { name: 'n', type: 'int', description: 'Cumulative total-token limit.' },
+        { name: 'usd', type: 'float', description: 'Cumulative estimated-cost limit in USD.' },
+      ],
+      returns: 'None (mutates the builder). Breach raises WorkflowTimeoutError.',
+      example: `from flowgentra_ai.graph import StateGraph, END
+from flowgentra_ai._native import WorkflowTimeoutError, llm
+from typing import TypedDict
+
+class S(TypedDict):
+    x: int
+
+llm.py_set_model_price("my-finetune", 1.0, 3.0)
+
+b = StateGraph(S)
+b.add_node("work", lambda state: {"x": state["x"] + 1})
+b.set_entry_point("work")
+b.add_edge("work", END)
+b.set_max_duration(60.0)
+b.set_max_tokens(100_000)
+b.set_max_cost(2.50)
+g = b.compile()
+
+try:
+    g.invoke({"x": 0})
+except WorkflowTimeoutError as e:
+    print("budget exceeded:", e)`,
+    },
+  },
+
+  // ─── EXECUTION CONTROL: STREAMING & ASYNC ────────────────────────────────────
+  {
+    id: 'streaming-async',
+    topic: 'execution',
+    name: 'Streaming & Async Execution',
+    summary: 'Watch a run live: stream() yields execution events synchronously; astream() is a native async iterator; ainvoke() awaits the final state without blocking the event loop.',
+    rust: {
+      signature: `graph.invoke(state).await -> Result<S>
+graph.subscribe() -> broadcast::Receiver<ExecutionEvent>`,
+      description: 'Rust execution is async-native — `invoke` is an async fn. For live events, call `subscribe()` before invoking and receive `ExecutionEvent`s (GraphStarted, NodeStarted, NodeCompleted, EdgeTraversed, LLMStreaming, ToolCalled, GraphCompleted/Failed) on a tokio broadcast channel.',
+      params: [
+        { name: 'state', type: 'S', description: 'Initial state for the run.' },
+      ],
+      returns: 'Result<S> — final state; events arrive on the subscribed receiver',
+      example: `let mut events = graph.subscribe();
+tokio::spawn(async move {
+    while let Ok(ev) = events.recv().await {
+        println!("{ev:?}");
+    }
+});
+let final_state = graph.invoke(MyState::default()).await?;`,
+    },
+    python: {
+      signature: `graph.invoke(input: dict) -> dict                 # sync, GIL released
+graph.stream(input: dict) -> GraphStream           # sync event iterator
+await graph.ainvoke(input: dict) -> dict           # native awaitable
+async for ev in graph.astream(input): ...          # native async iterator`,
+      description: 'Since 0.3.1 both async variants are native (pyo3-async-runtimes): the graph future runs on the embedded tokio runtime bridged to your asyncio loop — no worker-thread bounce, no per-event block_on. Event dicts carry a `type` key (`graph_started`, `node_started`, `node_completed`, `edge_traversed`, `llm_chunk`, `tool_called`, …) and the stream ends with a `values` event holding the final state. A failed run raises the typed error; breaking out of the loop early is safe.',
+      params: [
+        { name: 'input', type: 'dict', description: 'Initial state matching the schema.' },
+      ],
+      returns: 'stream()/astream(): iterator of event dicts ending with {"type": "values", "state": {...}}',
+      example: `import asyncio
+from flowgentra_ai.graph import StateGraph, END
+from typing import TypedDict
+
+class S(TypedDict):
+    x: int
+
+b = StateGraph(S)
+b.add_node("work", lambda s: {"x": s["x"] + 1})
+b.set_entry_point("work")
+b.add_edge("work", END)
+g = b.compile()
+
+# Sync streaming
+for ev in g.stream({"x": 0}):
+    print(ev["type"])
+
+# Native async
+async def main():
+    result = await g.ainvoke({"x": 0})
+    async for ev in g.astream({"x": 0}):
+        if ev["type"] == "values":
+            print("final:", ev["state"])
+
+asyncio.run(main())`,
+    },
+  },
+
+  // ─── EXECUTION CONTROL: INTERRUPTS / HUMAN-IN-THE-LOOP ───────────────────────
+  {
+    id: 'interrupts-hitl',
+    topic: 'execution',
+    name: 'Interrupts & Human-in-the-Loop',
+    summary: 'Pause a run from inside a node to ask a human, then resume with their answer injected into state. The interrupted node re-runs and reads the answer.',
+    rust: {
+      signature: `interrupt(payload: serde_json::Value) -> StateGraphError
+graph.resume(thread_id).await -> Result<S>
+graph.resume_with_update(thread_id, update).await -> Result<S>`,
+      description: 'Return `Err(interrupt(payload))` from a node to pause: the state at node entry is checkpointed under the thread ID and the run stops with `StateGraphError::InterruptedByNode { node, payload }`. Resume with `resume_with_update` to inject the human\\u2019s answer — the interrupted node re-runs and should read the answer from state. Breakpoints (`interrupt_before` / `interrupt_after` on the builder) pause between nodes instead.',
+      params: [
+        { name: 'payload', type: 'serde_json::Value', description: 'Describes what you need from the human (shown to the caller).' },
+        { name: 'update', type: 'S::Update', description: 'Fields to inject before the node re-runs.' },
+      ],
+      returns: 'invoke(): Err(InterruptedByNode) on pause; resume_with_update(): Result<S>',
+      example: `use flowgentra_ai::core::state_graph::interrupt;
+
+// Inside a node:
+if state.approval.is_none() {
+    return Err(interrupt(serde_json::json!({
+        "question": "Approve the draft?"
+    })));
+}
+
+// Caller:
+match graph.invoke_with_id("t1".into(), state).await {
+    Err(StateGraphError::InterruptedByNode { payload, .. }) => {
+        println!("agent asks: {payload}");
+        let mut up = MyStateUpdate::default();
+        up.approval = Some("yes".into());
+        let final_state = graph.resume_with_update("t1", up).await?;
+    }
+    Ok(final_state) => { /* finished without pausing */ }
+    Err(e) => return Err(e.into()),
+}`,
+    },
+    python: {
+      signature: `raise NodeInterrupt({...})                            # inside a node
+graph.invoke_with_thread(thread_id, input) -> dict
+graph.resume(thread_id) -> dict
+graph.resume_with_state(thread_id, updates: dict) -> dict`,
+      description: 'Raise `NodeInterrupt(payload)` inside a node to pause. The caller catches it — the payload is `exc.args[0]` — then injects the answer with `resume_with_state(thread_id, {...})`; keys are validated against the state schema. The interrupted node re-runs with the injected values. `NodeInterrupt` is importable from `flowgentra_ai` or `flowgentra_ai.graph`.',
+      params: [
+        { name: 'thread_id', type: 'str', description: 'Thread whose checkpoint holds the paused run.' },
+        { name: 'updates', type: 'dict', description: 'Schema-validated fields to inject before the node re-runs.' },
+      ],
+      returns: 'dict — final state once the run completes',
+      example: `from flowgentra_ai.graph import StateGraph, END, NodeInterrupt
+from typing import TypedDict
+
+class S(TypedDict):
+    draft: str
+    approval: str
+
+def review(state):
+    if not state.get("approval"):
+        raise NodeInterrupt({"question": "Approve the draft?"})
+    return {"draft": state["draft"] + " [approved]"}
+
+b = StateGraph(S)
+b.add_node("review", review)
+b.set_entry_point("review")
+b.add_edge("review", END)
+b.set_checkpointer("./checkpoints")
+g = b.compile()
+
+try:
+    g.invoke_with_thread("t1", {"draft": "hello", "approval": ""})
+except NodeInterrupt as e:
+    print("agent asks:", e.args[0])
+    result = g.resume_with_state("t1", {"approval": "yes"})
+    print(result["draft"])  # "hello [approved]"`,
+    },
+  },
+
+  // ─── EXECUTION CONTROL: NODE CACHING ─────────────────────────────────────────
+  {
+    id: 'caching',
+    topic: 'execution',
+    name: 'Node Caching (CachedNode)',
+    summary: 'Memoize a node on its input state: identical inputs return the cached update instead of re-running the node. TTL and size-bounded; hashing is canonical (key order never misses).',
+    rust: {
+      signature: 'CachedNode::new(inner: Arc<dyn Node<S>>, max_entries: usize, ttl: Option<Duration>)',
+      description: 'Wraps any node. The cache key is a canonical (sorted-key) hash of the input state, so semantically equal states always hit. The cache holds at most `max_entries` results; `ttl: None` means entries never expire (size-eviction only). `stats()` returns `(hits, misses)`. Useful for expensive pure nodes — retrieval, deterministic LLM calls, tool lookups.',
+      params: [
+        { name: 'inner', type: 'Arc<dyn Node<S>>', description: 'The node whose results are memoized.' },
+        { name: 'max_entries', type: 'usize', description: 'Capacity bound (min 1).' },
+        { name: 'ttl', type: 'Option<Duration>', description: 'Entry lifetime; None = no expiry.' },
+      ],
+      returns: 'CachedNode<S> — itself a Node<S>, add it with add_node()',
+      example: `use std::time::Duration;
+use flowgentra_ai::core::state_graph::CachedNode;
+
+let cached = Arc::new(CachedNode::new(
+    expensive_node,
+    1000,
+    Some(Duration::from_secs(300)),
+));
+let graph = StateGraph::<MyState>::builder()
+    .add_node("lookup", cached)
+    .set_entry_point("lookup")
+    .add_edge("lookup", END)
+    .compile()?;`,
+    },
+    python: {
+      signature: 'builder.add_cached_node(name: str, func, max_entries: int = 128, ttl_secs: float | None = None)',
+      description: 'Drop-in replacement for `add_node` that memoizes the wrapped function on its input state. `ttl_secs=None` means entries never expire (LRU eviction only). Same semantics as the Rust CachedNode.',
+      params: [
+        { name: 'name', type: 'str', description: 'Node name.' },
+        { name: 'func', type: 'callable', description: 'Node function (dict -> partial-update dict).' },
+        { name: 'max_entries', type: 'int', description: 'LRU capacity bound. Default 128.' },
+        { name: 'ttl_secs', type: 'float | None', description: 'Cache entry lifetime; None = no expiry.' },
+      ],
+      returns: 'None (mutates the builder)',
+      example: `from flowgentra_ai.graph import StateGraph, END
+from typing import TypedDict
+
+class S(TypedDict):
+    query: str
+    result: str
+
+calls = []
+def expensive(state):
+    calls.append(1)
+    return {"result": f"answer for {state['query']}"}
+
+b = StateGraph(S)
+b.add_cached_node("lookup", expensive, max_entries=1000, ttl_secs=300.0)
+b.set_entry_point("lookup")
+b.add_edge("lookup", END)
+g = b.compile()
+
+g.invoke({"query": "rust", "result": ""})
+g.invoke({"query": "rust", "result": ""})  # cache hit — node not re-run
+assert len(calls) == 1`,
+    },
+  },
+
+  // ─── LLM: MOCK LLM ───────────────────────────────────────────────────────────
+  {
+    id: 'mock-llm',
+    topic: 'llm',
+    name: 'MockLLM (offline testing)',
+    summary: 'A scripted, offline LLM for deterministic tests: fixed replies, ordered sequences, and substring-matched responses — with optional token usage and streaming.',
+    rust: {
+      signature: `MockLLM::always(reply: &str)
+MockLLM::sequence(replies: Vec<&str>)
+MockLLM::builder().when_contains("plan", "…").otherwise("…").build()`,
+      description: 'Implements the `LLM` trait without any network access. `always` returns one fixed reply; `sequence` returns replies in order (repeating the last); the builder matches on message content with `when_contains` / `when` and falls back to `otherwise`. `with_usage(prompt, completion)` attaches token counts so budget/cost paths are testable; `call_count()` asserts how many calls were made. Rust-only: not exposed to Python (drive tests through deterministic node functions there).',
+      params: [
+        { name: 'reply', type: '&str', description: 'The scripted assistant response.' },
+      ],
+      returns: 'MockLLM (implements LLM)',
+      example: `use flowgentra_ai::core::llm::mock::MockLLM;
+use std::sync::Arc;
+
+let llm = Arc::new(
+    MockLLM::sequence(vec!["step one", "step two"]).with_usage(10, 5)
+);
+
+let first  = llm.chat(vec![Message::user("go")]).await?;
+let second = llm.chat(vec![Message::user("next")]).await?;
+assert_eq!(first.content, "step one");
+assert_eq!(second.content, "step two");
+assert_eq!(llm.call_count(), 2);`,
+    },
+    python: {
+      signature: '— not exposed —',
+      description: 'MockLLM is Rust-only. For deterministic Python tests, use plain node functions (no LLM call) or point LLMConfig at a local stub server. This asymmetry is intentional: the Python test suite exercises the FFI boundary with pure-Python nodes.',
+      params: [],
+      returns: '—',
+      example: `# Python tests use deterministic node functions instead:
+def fake_llm_node(state):
+    return {"reply": "scripted answer"}`,
+    },
+  },
+
+  // ─── SECURITY MODEL ──────────────────────────────────────────────────────────
+  {
+    id: 'security-model',
+    topic: 'security',
+    name: 'Security Model',
+    summary: 'API keys are redacted everywhere by default; configs cannot import Python code unless you opt in; checkpoints are hardened against path traversal and corruption.',
+    rust: {
+      signature: `LLMConfig.api_key: Secret            // redacting Debug/Display/serde, zeroized
+from_config_path(path) -> Result<Agent>`,
+      description: 'The API key is wrapped in a `Secret`: it never appears in Debug output, logs, serialized state, or checkpoints (serialization writes a redaction marker, and `get_llm()` re-resolves the real key from the provider\\u2019s environment variable, e.g. OPENAI_API_KEY). Checkpoint writes are atomic (temp+rename) with a schema version and corruption detection; `thread_id` is validated as a single path component to block path traversal. RAG/embeddings config keys get the same redaction.',
+      params: [],
+      returns: '—',
+      example: `let config = LLMConfig::new(LLMProvider::OpenAI, "gpt-4o".into(), api_key);
+println!("{config:?}");          // api_key: Secret(REDACTED)
+let json = serde_json::to_string(&config)?;   // key redacted here too
+// The real key is read back from OPENAI_API_KEY when the client is built.`,
+    },
+    python: {
+      signature: `Agent.from_config_path(config_path, *, allow_python_handlers=None)`,
+      description: 'Breaking since 0.3.0: a YAML config that names Python modules to import (`python_handler_module:` or `handler: python.module:function`) is REJECTED unless you pass `allow_python_handlers=True`. Loading a config is otherwise data-only — it can never execute code from the file. Only enable the flag for configs you trust as much as your own source code.',
+      params: [
+        { name: 'config_path', type: 'str', description: 'Path to the YAML config.' },
+        { name: 'allow_python_handlers', type: 'bool | None', description: 'Explicit opt-in for configs that import Python handler modules. Default: reject.' },
+      ],
+      returns: 'Agent',
+      example: `from flowgentra_ai.agent import Agent
+
+# Data-only configs load normally:
+agent = Agent.from_config_path("agent.yaml")
+
+# Configs that import Python code need an explicit opt-in:
+agent = Agent.from_config_path(
+    "trusted_agent.yaml",
+    allow_python_handlers=True,
+)`,
     },
   },
 ]

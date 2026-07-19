@@ -261,14 +261,14 @@ agent = SkillAgent(
 )
 
 # Multi-skill: Phase 1 runs, LLM picks math-solver
-response = agent.execute_input("Solve: if 3x + 7 = 22, what is x?")
+response = agent.run("Solve: if 3x + 7 = 22, what is x?")
 print(agent.active_skills())  # ['math-solver']
 
 # Single-skill: Phase 1 skipped
 single = SkillRegistry(tool_registry=tool_registry)
 single.load("skills/math-solver")
 fast_agent = SkillAgent(name="math-only", llm=agent._llm, skills=single)
-result = fast_agent.execute_input("What is 15% of 240?")`}
+result = fast_agent.run("What is 15% of 240?")`}
           rust={`// Rust: wire SkillRegistry into a StateGraph node for two-phase routing`}
         />
       </Section>
@@ -288,7 +288,7 @@ conv = Conversational(
     llm=LLMClient(provider="mistral", model="mistral-small-latest"),
     skills=registry,
 )
-result = conv.execute_input("What is the derivative of x^3 + 2x?")`}
+result = conv.run("What is the derivative of x^3 + 2x?")`}
           rust={`// Conversational with skills — Rust implementation via StateGraph`}
         />
       </Section>
@@ -329,7 +329,7 @@ result = conv.execute_input("What is the derivative of x^3 + 2x?")`}
             </thead>
             <tbody>
               <tr><td style={tdCode}>SkillAgent(name, llm, skills, retries=3)</td><td style={td}>Create a two-phase skill agent.</td></tr>
-              <tr><td style={tdCode}>execute_input(user_input) → str</td><td style={td}>Run Phase 1 (or skip) then Phase 2. Returns final response.</td></tr>
+              <tr><td style={tdCode}>run(user_input) → str</td><td style={td}>Run Phase 1 (or skip) then Phase 2. Returns final response.</td></tr>
               <tr><td style={tdCodeLast}>active_skills() → list[str]</td><td style={tdLast}>Names of skills activated in this session.</td></tr>
             </tbody>
           </table>

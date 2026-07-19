@@ -6,14 +6,23 @@ import { useLanguage } from '../context/LanguageContext'
 
 const TOPIC_META = {
   'state-graph':     { title: 'StateGraph',        desc: 'Core graph builder, typed state, and field reducers.' },
+  'execution':       { title: 'Execution Control', desc: 'Budgets (steps, wall-clock, tokens, cost), cancellation, streaming, caching, and human-in-the-loop interrupts.' },
   'handlers-config': { title: 'Handlers & Config', desc: 'Handler registration, from_config_path, and the full YAML config schema.' },
+  'security':        { title: 'Security Model',    desc: 'Secret API keys, the allow_python_handlers gate, and checkpoint hardening.' },
   'memory':          { title: 'Memory',             desc: 'Checkpointers, conversation memory, and multi-turn thread execution.' },
   'builtin-nodes':   { title: 'Built-in Nodes',    desc: 'Ready-to-use node types — LLMNode, RetryNode, TimeoutNode, HumanInTheLoop, and more.' },
+  'nodes':           { title: 'Advanced Nodes',    desc: 'Parallel, join, loop, and subgraph node types for complex control flow.' },
   'agents':          { title: 'Agents',             desc: 'Predefined agent types: ZeroShotReAct, FewShotReAct, Conversational, and MemoryAwareAgent.' },
-  'llm':             { title: 'LLMs',        desc: 'All 7 providers, streaming, structured output, tool calling, caching, and cost tracking.' },
-  'rag':             { title: 'RAG',                desc: 'Retrieval-augmented generation — vector stores, embeddings, text splitters, and retrieval utilities.' },
+  'llm':             { title: 'LLMs',               desc: 'All providers, streaming, structured output, tool calling, caching, cost tracking, and the offline MockLLM.' },
+  'tools':           { title: 'Tools',              desc: 'Tool registry plus the built-in search, knowledge, file, data, code-execution, and communication tools.' },
+  'rag':             { title: 'RAG',                desc: 'Retrieval-augmented generation — vector stores, embeddings, and retrieval utilities.' },
+  'data-loading':    { title: 'Document Loaders',  desc: 'Load PDFs, HTML, CSV, JSON, and more into documents for RAG.' },
+  'text-processing': { title: 'Text Splitters',    desc: 'Chunking strategies: character, token, recursive, and semantic splitters.' },
+  'search-ranking':  { title: 'Rerankers',          desc: 'Re-rank retrieved documents: reciprocal rank fusion, LLM rerankers, and more.' },
+  'evaluation':      { title: 'Evaluation',         desc: 'Scoring, grading, metrics, and self-correction for agent outputs.' },
   'supervisor':      { title: 'Supervisor',         desc: 'Multi-agent orchestration with sequential, parallel, or LLM-routed strategies.' },
-  'observability':   { title: 'Observability',      desc: 'Execution tracing, graph visualization (Mermaid / DOT), and output scoring.' },
+  'multi-agent':     { title: 'Multi-Agent Patterns', desc: 'Supervision strategies, routing rules, and agent-to-agent handoff.' },
+  'observability':   { title: 'Observability',      desc: 'Execution tracing, graph visualization (Mermaid / DOT), and token/cost accounting.' },
 }
 
 export default function TopicPage() {

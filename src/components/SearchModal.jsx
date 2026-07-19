@@ -47,12 +47,15 @@ const SEARCH_INDEX = [
 
   // API Reference
   { title: 'StateGraph API',            route: '/docs/api/state-graph',    desc: 'StateGraph, builder, add_node, add_edge, compile, invoke.',        tags: ['api', 'stategraph', 'graph', 'builder'] },
-  { title: 'LLM API',                   route: '/docs/api/llm-clients',    desc: 'LLM class, LLMConfig, Message, ToolDefinition, TokenUsage.',       tags: ['api', 'llm', 'llmconfig', 'message'] },
+  { title: 'LLM API',                   route: '/docs/api/llm',    desc: 'LLM class, LLMConfig, Message, ToolDefinition, TokenUsage.',       tags: ['api', 'llm', 'llmconfig', 'message'] },
   { title: 'Agents API',                route: '/docs/api/agents',         desc: 'Agent, AgentBuilder, AgentType, from_config_path.',                tags: ['api', 'agent', 'agentbuilder'] },
-  { title: 'Memory API',                route: '/docs/api/memory-types',   desc: 'ConversationMemory, FileCheckpointer, AsyncSqliteCheckpointer.',   tags: ['api', 'memory', 'checkpointer'] },
-  { title: 'RAG API',                   route: '/docs/api/rag-config',     desc: 'InMemoryVectorStore, Embeddings, RecursiveCharacterTextSplitter.',  tags: ['api', 'rag', 'vector', 'embeddings'] },
+  { title: 'Memory API',                route: '/docs/api/memory',   desc: 'ConversationMemory, FileCheckpointer, AsyncSqliteCheckpointer.',   tags: ['api', 'memory', 'checkpointer'] },
+  { title: 'RAG API',                   route: '/docs/api/rag',     desc: 'InMemoryVectorStore, Embeddings, RecursiveCharacterTextSplitter.',  tags: ['api', 'rag', 'vector', 'embeddings'] },
   { title: 'Supervisor API',            route: '/docs/api/supervisor',     desc: 'Supervisor, OrchestrationStrategy, agent routing.',                tags: ['api', 'supervisor', 'multi-agent'] },
   { title: 'Observability API',         route: '/docs/api/observability',  desc: 'ExecutionTracer, graph_to_mermaid, evaluate_output_score.',       tags: ['api', 'tracer', 'mermaid', 'score'] },
+  { title: 'Execution Control API',     route: '/docs/api/execution',      desc: 'Budgets (tokens, cost, wall-clock), cancellation, streaming, astream, caching, NodeInterrupt.', tags: ['api', 'budget', 'cost', 'tokens', 'cancel', 'stream', 'astream', 'ainvoke', 'cache', 'interrupt', 'human-in-the-loop'] },
+  { title: 'Security Model API',        route: '/docs/api/security',       desc: 'Secret API keys, allow_python_handlers gate, checkpoint hardening.', tags: ['api', 'security', 'secret', 'api key', 'allow_python_handlers'] },
+  { title: 'Tools API',                 route: '/docs/api/tools',          desc: 'ToolRegistry, built-in search/knowledge/file/data/code tools.',    tags: ['api', 'tools', 'registry', 'calculator', 'search'] },
 
   // Tutorials
   { title: 'Tutorial: Research Assistant', route: '/docs/tutorials/research-assistant', desc: 'Full end-to-end guide: classification, tools, memory, traces.', tags: ['tutorial', 'guide', 'e2e', 'end-to-end', 'research'] },

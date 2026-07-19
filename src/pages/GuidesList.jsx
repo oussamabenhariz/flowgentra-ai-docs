@@ -125,7 +125,7 @@ export default function GuidesList() {
       <section className="quick-start">
         <h2>⚡ Quick Start</h2>
         <div className="quick-links">
-          <Link to="/docs/getting-started/installation" className="quick-link">
+          <Link to="/docs/installation" className="quick-link">
             📦 Installation
           </Link>
           <Link to="/docs/quickstart-python" className="quick-link">
@@ -134,7 +134,7 @@ export default function GuidesList() {
           <Link to="/docs/quickstart-rust" className="quick-link">
             🦀 Rust Quick Start
           </Link>
-          <Link to="/docs/first-agent" className="quick-link">
+          <Link to="/docs/getting-started" className="quick-link">
             🤖 Build First Agent
           </Link>
         </div>

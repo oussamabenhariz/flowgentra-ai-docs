@@ -28,21 +28,18 @@ export default function QuickStartPython() {
 
       <Section id="prerequisites" title="Prerequisites">
         <ul style={ul}>
-          <li>Python 3.10+</li>
+          <li>Python 3.9+</li>
           <li>An API key for your LLM provider (e.g., <code style={inlineCode}>OPENAI_API_KEY</code>)</li>
           <li>pip or a virtual environment manager</li>
         </ul>
       </Section>
 
       <Section id="install" title="Installation">
-        <p style={muted}>Install from PyPI:</p>
-        <CodeBlock forceLang="bash" rust={`pip install flowgentra-ai
-
-# With optional extras:
-pip install "flowgentra-ai[openai]"       # OpenAI provider
-pip install "flowgentra-ai[anthropic]"    # Anthropic / Claude
-pip install "flowgentra-ai[tracing]"      # Structured logging
-pip install "flowgentra-ai[openai,anthropic,tracing]"  # Multiple`} />
+        <p style={muted}>
+          Install from PyPI. One wheel ships the full Rust engine — every
+          provider and backend is compiled in, so there are no extras to pick:
+        </p>
+        <CodeBlock forceLang="bash" rust={`pip install flowgentra-ai`} />
 
         <Callout type="info" title="Building from source">
           If you need the latest changes or want to customize the Rust engine:
@@ -52,7 +49,7 @@ pip install "flowgentra-ai[openai,anthropic,tracing]"  # Multiple`} />
 
         <p style={{ ...muted, marginTop: 16 }}>Verify installation:</p>
         <CodeBlock forceLang="bash" rust={`python -c "import flowgentra_ai; print(flowgentra_ai.__version__)"
-# 0.2.6`} />
+# 0.3.1`} />
       </Section>
 
       <Section id="first-agent" title="Your First Agent">
