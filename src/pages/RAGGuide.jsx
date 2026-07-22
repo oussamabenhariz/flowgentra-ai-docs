@@ -9,6 +9,7 @@ const anchors = [
   { id: 'embeddings', label: 'Embeddings & Vector Stores' },
   { id: 'retrieval', label: 'Retrieval' },
   { id: 'generation', label: 'Generation with Context' },
+  { id: 'all-backends', label: 'All Available Backends' },
 ]
 
 export default function RAGGuide() {
@@ -550,7 +551,87 @@ print(result["answer"])`}
           This creates a complete RAG pipeline: retrieve relevant context, then generate an answer grounded in that context.
         </p>
       </Section>
+
+      <Section id="all-backends" title="All Available Backends">
+        <p style={{ color: '#8b949e', marginBottom: 16 }}>
+          The examples above use Chroma and OpenAI embeddings for simplicity, but the RAG surface is much
+          larger — this is the full inventory, confirmed against the compiled module (not aspirational).
+          Each is a class under <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>flowgentra_ai.rag</code> (or{' '}
+          <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>flowgentra_ai.document_loaders</code> /{' '}
+          <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>flowgentra_ai.rerankers</code> for
+          the last two groups) — construction and per-backend options vary; check each class's docstring/signature
+          in your editor for the specific fields it needs (e.g. connection URL, region, index name).
+        </p>
+
+        <BackendGroup
+          title="Vector Stores (19)"
+          items={[
+            'ChromaStore', 'InMemoryVectorStore', 'HnswVectorStore', 'PineconeStore', 'QdrantStore',
+            'WeaviateStore', 'MilvusStore', 'PgVectorStore', 'RedisVectorStore', 'ElasticsearchVectorStore',
+            'OpenSearchVectorStore', 'MongoAtlasVectorStore', 'Neo4jVectorStore', 'AzureAISearchStore',
+            'AstraDbVectorStore', 'SingleStoreVectorStore', 'TurbopufferStore', 'UpstashVectorStore', 'VectaraStore',
+          ]}
+        />
+
+        <BackendGroup
+          title="Embedding Providers"
+          items={[
+            'Embeddings (factory: .openai() / .ollama() / .mistral() / .mock(), see above)',
+            'AzureOpenAIEmbeddings', 'BedrockEmbeddings', 'CohereEmbeddings', 'GoogleVertexEmbeddings',
+            'JinaEmbeddings', 'NomicEmbeddings', 'TogetherEmbeddings', 'VoyageEmbeddings',
+          ]}
+        />
+
+        <BackendGroup
+          title="Retrievers (13)"
+          items={[
+            'VectorRetriever', 'Bm25Retriever', 'EnsembleRetriever', 'MultiQueryRetriever',
+            'MultiVectorRetriever', 'ParentDocumentRetriever', 'ContextualCompressionRetriever',
+            'ScoreThresholdRetriever', 'SelfQueryRetriever', 'TimeWeightedRetriever',
+            'ArxivRetriever', 'WikipediaRetriever', 'TavilySearchRetriever',
+          ]}
+        />
+
+        <BackendGroup
+          title="Document Loaders (17) — flowgentra_ai.document_loaders"
+          items={[
+            'WebLoader', 'RecursiveUrlLoader', 'SitemapLoader', 'RssFeedLoader', 'DirectoryLoader',
+            'CsvLoader', 'JsonLoader', 'JsonlLoader', 'DataFrameLoader', 'ExcelLoader', 'DocxLoader',
+            'EpubLoader', 'GitLoader', 'S3Loader', 'ArxivLoader', 'WikipediaLoader', 'YouTubeLoader',
+          ]}
+        />
+
+        <BackendGroup
+          title="Rerankers (4) — flowgentra_ai.rerankers"
+          items={['CrossEncoderReranker', 'LLMReranker', 'RRFReranker', 'NoopReranker']}
+        />
+      </Section>
     </DocLayout>
+  )
+}
+
+function BackendGroup({ title, items }) {
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <h4 style={{ color: '#e6edf3', fontSize: '1rem', fontWeight: 600, marginBottom: 10 }}>{title}</h4>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {items.map((name) => (
+          <code
+            key={name}
+            style={{
+              background: '#161b22',
+              border: '1px solid #21262d',
+              borderRadius: 6,
+              padding: '4px 10px',
+              fontSize: '0.85em',
+              color: '#8b949e',
+            }}
+          >
+            {name}
+          </code>
+        ))}
+      </div>
+    </div>
   )
 }
 

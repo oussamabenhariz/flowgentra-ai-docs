@@ -468,18 +468,27 @@ async fn main() -> Result<()> {
 }`,
     },
     python: {
-      signature: `from flowgentra_ai.memory import (
-    ConversationMemory, FileCheckpointer,
-    SqliteCheckpointer, PostgresCheckpointer, RedisCheckpointer,
-    AsyncSqliteCheckpointer, AsyncPostgresCheckpointer, AsyncRedisCheckpointer,
-    TokenBufferMemory, SummaryMemory,
-)`,
-      description: 'Python exposes the full checkpointer family: file, SQLite, Postgres, and Redis — each with a sync and an async variant — plus the conversation-memory types. Config-driven agents wire memory declaratively via the YAML `memory:` section; graphs take a checkpointer via `builder.set_checkpointer(path)` / `set_sqlite_checkpointer(url)`. For multi-turn chat, `MemoryAwareAgent` manages history per thread with `run(input)` / `set_thread_id()`.',
+      signature: `# StateGraph resume/checkpointing — configured on the builder, not imported:
+builder.set_checkpointer(path)                 # FileCheckpointer
+builder.set_sqlite_checkpointer(url)           # SqliteCheckpointer
+builder.set_postgres_checkpointer(url)         # PostgresCheckpointer
+
+# Standalone state snapshot storage (separate system, used by
+# conversation-memory / Agent checkpointing, not StateGraph resume):
+from flowgentra_ai._native.state import (
+    MemoryCheckpointer, FileCheckpointer,
+    SqliteAsyncCheckpointer, PostgresAsyncCheckpointer, RedisAsyncCheckpointer,
+    MongoAsyncCheckpointer, MySqlAsyncCheckpointer, NamespacedCheckpointer,
+)
+from flowgentra_ai.memory import TokenBufferMemory, SummaryMemory, ConversationMemory`,
+      description: 'Two separate checkpointer systems share similar names — don’t mix them up. **StateGraph resume** (pause/resume, HITL) is configured only via builder methods: `set_checkpointer(path)` (file), `set_sqlite_checkpointer(url)`, or `set_postgres_checkpointer(url)` — there is no importable `Checkpointer` class for this path. **Standalone snapshot storage** — save/load a `DynState` blob by thread ID, used for conversation-memory persistence outside a graph — is the `_native.state` family: `MemoryCheckpointer`, `FileCheckpointer`, and async Sqlite/Postgres/Redis/Mongo/MySQL variants, wrappable in `NamespacedCheckpointer` for multi-tenant key scoping.',
       params: [
         { name: 'ConversationMemory', type: 'in-process', description: 'In-memory message history per thread.' },
-        { name: 'FileCheckpointer(path)', type: 'persistent', description: 'Disk-backed state persistence (atomic writes).' },
-        { name: 'SqliteCheckpointer(url)', type: 'persistent', description: 'Durable transactional checkpoints in SQLite.' },
-        { name: 'AsyncSqliteCheckpointer / AsyncPostgresCheckpointer / AsyncRedisCheckpointer', type: 'async', description: 'Async variants of the durable checkpointers.' },
+        { name: 'builder.set_checkpointer(path)', type: 'graph resume', description: 'File-backed StateGraph checkpointing (atomic writes).' },
+        { name: 'builder.set_sqlite_checkpointer(url)', type: 'graph resume', description: 'Durable transactional StateGraph checkpoints in SQLite.' },
+        { name: 'builder.set_postgres_checkpointer(url)', type: 'graph resume', description: 'StateGraph checkpoints in Postgres — the pick when multiple processes/replicas resume the same thread.' },
+        { name: 'SqliteAsyncCheckpointer / PostgresAsyncCheckpointer / RedisAsyncCheckpointer / MongoAsyncCheckpointer / MySqlAsyncCheckpointer', type: 'async snapshot store', description: 'Standalone async DynState snapshot storage (not wired into StateGraph resume) — save/load by thread ID, e.g. for custom conversation persistence.' },
+        { name: 'NamespacedCheckpointer(inner, namespace)', type: 'wrapper', description: 'Scopes any of the above snapshot checkpointers to `<namespace>:<thread_id>` — multiple tenants share one store without key collisions.' },
         { name: 'TokenBufferMemory(max_tokens)', type: 'buffer', description: 'Token-bounded message history.' },
         { name: 'SummaryMemory(config)', type: 'compressed', description: 'LLM-based summarization of old messages.' },
       ],
@@ -499,8 +508,9 @@ r2 = agent.run_with_thread("alice")
 print(r2.get("reply"))  # "Your name is Alice."
 
 # Graphs: durable checkpointing on the builder
-# builder.set_checkpointer("./checkpoints")          # file-backed
-# builder.set_sqlite_checkpointer("sqlite://state.db")  # SQLite
+# builder.set_checkpointer("./checkpoints")               # file-backed
+# builder.set_sqlite_checkpointer("sqlite://state.db")    # SQLite
+# builder.set_postgres_checkpointer("postgres://...")     # Postgres (multi-process)
 
 # Or configure entirely in YAML:
 # memory:
@@ -2136,14 +2146,16 @@ asyncio.run(main())`,
     rust: {
       signature: `interrupt(payload: serde_json::Value) -> StateGraphError
 graph.resume(thread_id).await -> Result<S>
-graph.resume_with_update(thread_id, update).await -> Result<S>`,
-      description: 'Return `Err(interrupt(payload))` from a node to pause: the state at node entry is checkpointed under the thread ID and the run stops with `StateGraphError::InterruptedByNode { node, payload }`. Resume with `resume_with_update` to inject the human\\u2019s answer — the interrupted node re-runs and should read the answer from state. Breakpoints (`interrupt_before` / `interrupt_after` on the builder) pause between nodes instead.',
+graph.resume_with_update(thread_id, update).await -> Result<S>
+graph.resume_with_command(thread_id, command: Command<S>).await -> Result<S>`,
+      description: 'Return `Err(interrupt(payload))` from a node to pause: the state at node entry is checkpointed under the thread ID and the run stops with `StateGraphError::InterruptedByNode { node, payload }`. Resume with `resume_with_update` to inject the human\\u2019s answer — the interrupted node re-runs and should read the answer from state. Breakpoints (`interrupt_before` / `interrupt_after` on the builder) pause between nodes instead. `resume_with_command` unifies update + a `goto` override (jump to an arbitrary node instead of the checkpoint\\u2019s natural successor) + a value reachable via `ctx.resume_value()` — mirrors LangGraph\\u2019s `Command(resume=, update=, goto=)`.',
       params: [
         { name: 'payload', type: 'serde_json::Value', description: 'Describes what you need from the human (shown to the caller).' },
         { name: 'update', type: 'S::Update', description: 'Fields to inject before the node re-runs.' },
+        { name: 'command', type: 'Command<S>', description: 'Command::resume(v) / Command::update(u) / .with_goto(node) — composable via builder methods.' },
       ],
-      returns: 'invoke(): Err(InterruptedByNode) on pause; resume_with_update(): Result<S>',
-      example: `use flowgentra_ai::core::state_graph::interrupt;
+      returns: 'invoke(): Err(InterruptedByNode) on pause; resume_*(): Result<S>',
+      example: `use flowgentra_ai::core::state_graph::{interrupt, Command};
 
 // Inside a node:
 if state.approval.is_none() {
@@ -2152,7 +2164,7 @@ if state.approval.is_none() {
     })));
 }
 
-// Caller:
+// Caller — plain update:
 match graph.invoke_with_id("t1".into(), state).await {
     Err(StateGraphError::InterruptedByNode { payload, .. }) => {
         println!("agent asks: {payload}");
@@ -2162,20 +2174,25 @@ match graph.invoke_with_id("t1".into(), state).await {
     }
     Ok(final_state) => { /* finished without pausing */ }
     Err(e) => return Err(e.into()),
-}`,
+}
+
+// Or jump straight to a different node on resume:
+let final_state = graph.resume_with_command("t1", Command::default().with_goto("cleanup")).await?;`,
     },
     python: {
       signature: `raise NodeInterrupt({...})                            # inside a node
 graph.invoke_with_thread(thread_id, input) -> dict
 graph.resume(thread_id) -> dict
-graph.resume_with_state(thread_id, updates: dict) -> dict`,
-      description: 'Raise `NodeInterrupt(payload)` inside a node to pause. The caller catches it — the payload is `exc.args[0]` — then injects the answer with `resume_with_state(thread_id, {...})`; keys are validated against the state schema. The interrupted node re-runs with the injected values. `NodeInterrupt` is importable from `flowgentra_ai` or `flowgentra_ai.graph`.',
+graph.resume_with_state(thread_id, updates: dict) -> dict
+graph.resume_command(thread_id, command: Command) -> dict`,
+      description: 'Raise `NodeInterrupt(payload)` inside a node to pause. The caller catches it — the payload is `exc.args[0]` — then injects the answer with `resume_with_state(thread_id, {...})`; keys are validated against the state schema. The interrupted node re-runs with the injected values. `NodeInterrupt` is importable from `flowgentra_ai` or `flowgentra_ai.graph`. `Command` (also from `flowgentra_ai.graph`) unifies `update=` with a `goto=` override in one call — mirrors LangGraph\\u2019s `Command(resume=, update=, goto=)`. Note: `Command(resume=value)` is only reachable from Rust-authored nodes (via the node context) — Python node functions receive only `state: dict`, so for Python nodes always hand the human\\u2019s answer through `update=`.',
       params: [
         { name: 'thread_id', type: 'str', description: 'Thread whose checkpoint holds the paused run.' },
         { name: 'updates', type: 'dict', description: 'Schema-validated fields to inject before the node re-runs.' },
+        { name: 'command', type: 'Command', description: 'Command(update={...}) and/or Command(goto="node_name"); update= is schema-validated the same as resume_with_state.' },
       ],
       returns: 'dict — final state once the run completes',
-      example: `from flowgentra_ai.graph import StateGraph, END, NodeInterrupt
+      example: `from flowgentra_ai.graph import StateGraph, END, NodeInterrupt, Command
 from typing import TypedDict
 
 class S(TypedDict):
@@ -2198,8 +2215,69 @@ try:
     g.invoke_with_thread("t1", {"draft": "hello", "approval": ""})
 except NodeInterrupt as e:
     print("agent asks:", e.args[0])
-    result = g.resume_with_state("t1", {"approval": "yes"})
-    print(result["draft"])  # "hello [approved]"`,
+    result = g.resume_command("t1", Command(update={"approval": "yes"}))
+    print(result["draft"])  # "hello [approved]"
+
+# Or skip straight to a different node on resume:
+# g.resume_command("t1", Command(goto="cleanup"))`,
+    },
+  },
+
+  // ─── SUBGRAPHS ────────────────────────────────────────────────────────────────
+  {
+    id: 'subgraphs',
+    topic: 'execution',
+    name: 'Subgraphs',
+    summary: 'Compose a compiled graph as a single node in a larger graph. Shares the parent\\u2019s state schema — no separate input/output mapping — and only the fields it actually changed merge back, so Append/Sum-reduced fields aren\\u2019t double-counted.',
+    rust: {
+      signature: 'builder.add_subgraph(name: &str, subgraph: StateGraph<S>) -> StateGraphBuilder<S>',
+      description: 'The subgraph must share the parent\\u2019s state type `S`. It runs to completion, then its final state is diffed (via JSON) against what it was given: unchanged fields are dropped, an array extended only at the tail is emitted as just the new elements (correct for an `Append` reducer), and any other changed field is emitted as a full replacement. Requires `S::Update: DeserializeOwned`, which every `#[derive(State)]`-generated update type satisfies automatically.',
+      params: [
+        { name: 'name', type: '&str', description: 'Node name the subgraph is wired in as.' },
+        { name: 'subgraph', type: 'StateGraph<S>', description: 'A graph already compiled with `.compile()`, sharing state type S.' },
+      ],
+      returns: 'StateGraphBuilder<S> — for chaining',
+      example: `let doc_processor = StateGraph::<DocState>::builder()
+    .add_node("load", load_fn)
+    .add_node("chunk", chunk_fn)
+    .set_entry_point("load")
+    .add_edge("load", "chunk")
+    .add_edge("chunk", END)
+    .compile()?;
+
+let main_graph = StateGraph::<DocState>::builder()
+    .add_node("fetch", fetch_fn)
+    .add_subgraph("process_documents", doc_processor)
+    .set_entry_point("fetch")
+    .add_edge("fetch", "process_documents")
+    .add_edge("process_documents", END)
+    .compile()?;`,
+    },
+    python: {
+      signature: 'builder.add_subgraph(name: str, subgraph: CompiledGraph) -> None',
+      description: 'Same semantics as the Rust API: compile the subgraph on its own (same state schema as the parent), then wire it in as a single node. Only the fields it actually changed are merged back into the parent state.',
+      params: [
+        { name: 'name', type: 'str', description: 'Node name the subgraph is wired in as.' },
+        { name: 'subgraph', type: 'CompiledGraph', description: 'A graph already built with `builder.compile()`.' },
+      ],
+      returns: 'None — mutates the builder',
+      example: `from flowgentra_ai.graph import StateGraph, END
+
+doc_builder = StateGraph(DocState)
+doc_builder.add_node("load", load_document_node)
+doc_builder.add_node("chunk", chunk_document_node)
+doc_builder.set_entry_point("load")
+doc_builder.add_edge("load", "chunk")
+doc_builder.add_edge("chunk", END)
+document_processor = doc_builder.compile()
+
+main_builder = StateGraph(DocState)
+main_builder.add_node("fetch", fetch_node)
+main_builder.add_subgraph("process_documents", document_processor)
+main_builder.set_entry_point("fetch")
+main_builder.add_edge("fetch", "process_documents")
+main_builder.add_edge("process_documents", END)
+graph = main_builder.compile()`,
     },
   },
 

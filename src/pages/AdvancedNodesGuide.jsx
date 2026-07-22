@@ -236,30 +236,50 @@ builder.add_node("quality_loop", loop_config)`}
 
       <Section id="subgraph-nodes" title="Subgraph Nodes">
         <p style={{ color: '#8b949e', marginBottom: 16 }}>
-          Compose complex workflows from smaller graphs.
+          Compose complex workflows from smaller, independently-testable graphs. A subgraph shares
+          the parent's state schema (no separate input/output mapping) — compile it once, then add
+          it as a single node with <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>add_subgraph(name, compiled_graph)</code>.
+          It runs to completion, and only the fields it actually changed are merged back —
+          Append/Sum-reduced fields (e.g. a growing message list) merge correctly instead of being
+          double-counted, because the parent only sees the subgraph's net change, not its whole final state.
         </p>
         <CodeBlock
-          python={`from flowgentra_ai.nodes import SubgraphNodeConfig
+          rust={`use flowgentra_ai::core::state_graph::{StateGraph, END};
 
-# Define a subgraph for document processing
-doc_builder = StateGraph(DocumentState)
+// Compile the subgraph on its own — same state type as the parent.
+let doc_processor = StateGraph::<DocState>::builder()
+    .add_node("load", load_fn)
+    .add_node("chunk", chunk_fn)
+    .set_entry_point("load")
+    .add_edge("load", "chunk")
+    .add_edge("chunk", END)
+    .compile()?;
+
+let main_graph = StateGraph::<DocState>::builder()
+    .add_node("fetch", fetch_fn)
+    .add_subgraph("process_documents", doc_processor)
+    .set_entry_point("fetch")
+    .add_edge("fetch", "process_documents")
+    .add_edge("process_documents", END)
+    .compile()?;`}
+          python={`from flowgentra_ai.graph import StateGraph, END
+
+# Compile the subgraph on its own — same state schema as the parent.
+doc_builder = StateGraph(DocState)
 doc_builder.add_node("load", load_document_node)
 doc_builder.add_node("chunk", chunk_document_node)
-doc_builder.add_node("embed", embed_chunks_node)
 doc_builder.set_entry_point("load")
 doc_builder.add_edge("load", "chunk")
-doc_builder.add_edge("chunk", "embed")
-
+doc_builder.add_edge("chunk", END)
 document_processor = doc_builder.compile()
 
-# Use as a node in larger workflow
-subgraph_config = SubgraphNodeConfig(
-    subgraph=document_processor,
-    input_mapping={"document_path": "path"},  # Map outer state to inner
-    output_mapping={"processed_chunks": "chunks"}  # Map inner results to outer
-)
-
-main_builder.add_node("process_documents", subgraph_config)`}
+main_builder = StateGraph(DocState)
+main_builder.add_node("fetch", fetch_node)
+main_builder.add_subgraph("process_documents", document_processor)
+main_builder.set_entry_point("fetch")
+main_builder.add_edge("fetch", "process_documents")
+main_builder.add_edge("process_documents", END)
+graph = main_builder.compile()`}
         />
       </Section>
 

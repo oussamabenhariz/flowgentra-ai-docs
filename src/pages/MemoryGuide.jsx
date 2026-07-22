@@ -24,37 +24,41 @@ export default function MemoryGuide() {
 
       <Section id="checkpointers" title="Checkpointers">
         <p style={{ color: '#8b949e', marginBottom: 16 }}>
-          Checkpointers save your graph's state to disk after each node execution. This lets you resume interrupted workflows and provides audit trails.
+          Checkpointers save your graph's state after every step, keyed by thread ID. This lets you
+          resume interrupted or paused workflows (see the <a href="/docs/human-in-loop" style={{ color: '#58a6ff' }}>Human-in-the-Loop guide</a>) and
+          survive process restarts. Set exactly one backend on the builder before <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>compile()</code>.
         </p>
         <CodeBlock
-          rust={`use flowgentra_ai::checkpointer::FileCheckpointer;
+          rust={`use flowgentra_ai::core::state_graph::{StateGraph, END};
+use std::sync::Arc;
 
-let checkpointer = FileCheckpointer::new("./checkpoints")?;
-let graph = StateGraph::builder()
+let graph = StateGraph::<MyState>::builder()
     .add_node("step1", step1_fn)
     .add_node("step2", step2_fn)
     .add_edge("step1", "step2")
-    .set_entry("step1")
-    .with_checkpointer(checkpointer)
-    .build()?;
+    .add_edge("step2", END)
+    .set_entry_point("step1")
+    .set_checkpointer(Arc::new(flowgentra_ai::core::state_graph::FileCheckpointer::new("./checkpoints")?))
+    .compile()?;
 
-// Run with checkpointing
-let result = graph.invoke(initial_state).await?;`}
-          python={`from flowgentra_ai.checkpointer import FileCheckpointer
+// Each thread_id gets its own checkpoint history.
+let result = graph.invoke_with_id("user-42".into(), initial_state).await?;`}
+          python={`from flowgentra_ai.graph import StateGraph, END
 
-checkpointer = FileCheckpointer("./checkpoints")
-graph = StateGraph(MyState)
-graph.add_node("step1", step1_fn)
-graph.add_node("step2", step2_fn)
-graph.add_edge("step1", "step2")
-graph.set_entry_point("step1")
-graph.checkpointer = checkpointer
+builder = StateGraph(MyState)
+builder.add_node("step1", step1_fn)
+builder.add_node("step2", step2_fn)
+builder.add_edge("step1", "step2")
+builder.add_edge("step2", END)
+builder.set_entry_point("step1")
+builder.set_checkpointer("./checkpoints")  # FileCheckpointer under the hood
+graph = builder.compile()
 
-# Run with checkpointing
-result = graph.invoke(initial_state)`}
+# Each thread_id gets its own checkpoint history.
+result = graph.invoke_with_thread("user-42", initial_state)`}
         />
 
-        <h4 style={{ color: '#e6edf3', fontSize: '1.1rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>Checkpointer Types</h4>
+        <h4 style={{ color: '#e6edf3', fontSize: '1.1rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>Checkpointer Backends</h4>
         <div style={{
           background: '#0d1117',
           border: '1px solid #21262d',
@@ -65,33 +69,35 @@ result = graph.invoke(initial_state)`}
           <table style={{ width: '100%', borderCollapse: 'collapse', color: '#8b949e' }}>
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Checkpointer</th>
+                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Builder call</th>
                 <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Storage</th>
                 <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Use Case</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>FileCheckpointer</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Local JSON files</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>set_checkpointer(path)</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Local JSON files (one per thread/step)</td>
                 <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Development, single-machine deployments</td>
               </tr>
               <tr>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>ThreadedCheckpointer</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Per-thread JSON files</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Multi-user applications, chatbots</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>set_sqlite_checkpointer(url)</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Single SQLite file, transactional writes</td>
+                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Single-process durable execution (CLI tools, single-instance services)</td>
               </tr>
               <tr>
-                <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.9em' }}>DatabaseCheckpointer</td>
-                <td style={{ padding: '8px' }}>PostgreSQL/MySQL</td>
-                <td style={{ padding: '8px' }}>Production, distributed systems</td>
+                <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.9em' }}>set_postgres_checkpointer(url)</td>
+                <td style={{ padding: '8px' }}>Postgres table, created automatically</td>
+                <td style={{ padding: '8px' }}>Horizontally-scaled services — multiple processes/replicas can resume the same thread</td>
               </tr>
             </tbody>
           </table>
         </div>
 
         <p style={{ color: '#8b949e', marginBottom: 16 }}>
-          Checkpoints are saved as JSON files. You can resume from any checkpoint by loading the saved state and continuing execution.
+          Calling more than one of these is resolved by fixed precedence, not call order: Postgres wins over
+          SQLite, which wins over the file path. In-memory (no persistence beyond the current process) is the
+          default when none are called.
         </p>
       </Section>
 
@@ -224,58 +230,49 @@ response2 = agent.run("Now multiply that by 3")
 
       <Section id="threading" title="Threading & Sessions">
         <p style={{ color: '#8b949e', marginBottom: 16 }}>
-          For applications with multiple users or conversations, use threads to keep conversations separate.
+          There's no separate "threaded checkpointer" type — any checkpointer backend already
+          scopes checkpoints by thread ID. Pass a distinct <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>thread_id</code> per
+          user/conversation to <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>invoke_with_thread</code> (Python)
+          or <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>invoke_with_id</code> (Rust) to keep them separate.
         </p>
         <CodeBlock
-          rust={`use flowgentra_ai::checkpointer::ThreadedCheckpointer;
+          rust={`// User A's conversation
+let result_a = graph.invoke_with_id("user_a".into(), initial_state.clone()).await?;
 
-// Each thread has its own conversation history
-let checkpointer = ThreadedCheckpointer::new("./threads")?;
+// User B's conversation (completely separate checkpoint history)
+let result_b = graph.invoke_with_id("user_b".into(), initial_state).await?;`}
+          python={`# User A's conversation
+result_a = graph.invoke_with_thread("user_a", initial_state)
 
-// User A's conversation
-let thread_a = checkpointer.create_thread("user_a")?;
-let result_a = graph.invoke_with_thread(initial_state, thread_a).await?;
-
-// User B's conversation (completely separate)
-let thread_b = checkpointer.create_thread("user_b")?;
-let result_b = graph.invoke_with_thread(initial_state, thread_b).await?;`}
-          python={`from flowgentra_ai.checkpointer import ThreadedCheckpointer
-
-# Each thread has its own conversation history
-checkpointer = ThreadedCheckpointer("./threads")
-
-# User A's conversation
-result_a = graph.invoke(initial_state, thread_id="user_a")
-
-# User B's conversation (completely separate)
-result_b = graph.invoke(initial_state, thread_id="user_b")`}
+# User B's conversation (completely separate checkpoint history)
+result_b = graph.invoke_with_thread("user_b", initial_state)`}
         />
       </Section>
 
       <Section id="persistence" title="Persistence & Recovery">
         <p style={{ color: '#8b949e', marginBottom: 16 }}>
-          Checkpoints let you recover from crashes and resume long-running workflows. You can also inspect execution history for debugging.
+          Checkpoints let you recover from crashes and resume long-running or paused workflows — see
+          the <a href="/docs/human-in-loop" style={{ color: '#58a6ff' }}>Human-in-the-Loop guide</a> for
+          {' '}<code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>resume()</code>, <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>resume_with_state()</code>,
+          and <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>resume_command()</code>. To inspect what's been checkpointed for a
+          thread (e.g. for debugging), use <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>get_state_history</code>:
         </p>
         <CodeBlock
-          rust={`// List all checkpoints for a thread
-let checkpoints = checkpointer.list_checkpoints("user_a")?;
-
-// Resume from a specific checkpoint
-let snapshot = checkpointer.load_checkpoint("user_a", checkpoint_id)?;
-let resumed_state = snapshot.state;
-
-// Continue execution from where it left off
-let final_result = graph.invoke_from_checkpoint(resumed_state, snapshot).await?;`}
-          python={`# List all checkpoints for a thread
-checkpoints = checkpointer.list_checkpoints("user_a")
-
-# Resume from a specific checkpoint
-snapshot = checkpointer.load_checkpoint("user_a", checkpoint_id)
-resumed_state = snapshot.state
-
-# Continue execution from where it left off
-final_result = graph.invoke(resumed_state, thread_id="user_a")`}
+          rust={`// (step, node_name) pairs, oldest first — Rust exposes the same via
+// StateGraph::history(thread_id).
+let history = graph.history("user_a").await?;
+for (step, node) in &history {
+    println!("step {step}: {node}");
+}`}
+          python={`# [{"step_id": ..., "node": ...}, ...]
+history = graph.get_state_history("user_a")
+for entry in history:
+    print(entry["step_id"], entry["node"])`}
         />
+        <p style={{ color: '#8b949e', marginBottom: 16 }}>
+          A crashed or restarted process resumes exactly like a paused one — compile a graph
+          pointing at the same checkpointer backend and thread ID, then call <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>resume()</code>.
+        </p>
       </Section>
     </DocLayout>
   )

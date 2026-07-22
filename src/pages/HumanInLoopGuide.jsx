@@ -3,10 +3,10 @@ import CodeBlock from '../components/CodeBlock'
 import { useLanguage } from '../context/LanguageContext'
 
 const anchors = [
-  { id: 'human-in-loop-node', label: 'HumanInTheLoop Node' },
-  { id: 'approval-workflows', label: 'Approval Workflows' },
-  { id: 'intervention-points', label: 'Intervention Points' },
-  { id: 'feedback-loops', label: 'Feedback & Corrections' },
+  { id: 'breakpoints', label: 'Breakpoints (interrupt_before/after)' },
+  { id: 'in-node-interrupt', label: 'In-Node Interrupt' },
+  { id: 'command', label: 'Command (unified resume)' },
+  { id: 'python-node-limits', label: 'Python Node Limitations' },
 ]
 
 export default function HumanInLoopGuide() {
@@ -18,344 +18,153 @@ export default function HumanInLoopGuide() {
         Human-in-the-Loop Workflows
       </h1>
       <p style={{ color: '#8b949e', marginBottom: 40, lineHeight: 1.7 }}>
-        Human-in-the-loop (HITL) workflows let humans intervene in automated processes. Use this for quality control, safety checks, or when automation can't handle edge cases.
+        Human-in-the-loop (HITL) pauses a graph run so a human can inspect or supply a value, then
+        resumes execution — used for approvals, corrections, or anything automation can't safely
+        decide alone. Flowgentra has two pause mechanisms and three ways to resume; this page
+        covers both, and is accurate to the real API (verified against the test suite, not aspirational).
       </p>
 
-      <Section id="human-in-loop-node" title="HumanInTheLoop Node">
+      <Section id="breakpoints" title="Breakpoints: interrupt_before / interrupt_after">
         <p style={{ color: '#8b949e', marginBottom: 16 }}>
-          The <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3, fontSize: '0.9em' }}>HumanInTheLoop</code> node pauses execution and waits for human approval before continuing.
+          Mark a node on the builder and the run pauses right before (or after) it executes —
+          no code inside the node needs to know about the pause. Use this when the decision to
+          pause doesn't depend on the node's own logic (e.g. "always review before publish").
         </p>
         <CodeBlock
-          rust={`use flowgentra_ai::nodes::HumanInTheLoop;
+          rust={`use flowgentra_ai::core::state_graph::{StateGraph, END};
 
-#[derive(State)]
-struct MyState {
-    task: String,
-    approved: Option<bool>,
-    human_feedback: Option<String>,
+let graph = StateGraph::<PubState>::builder()
+    .add_node("draft", draft_fn)
+    .add_node("publish", publish_fn)
+    .set_entry_point("draft")
+    .add_edge("draft", "publish")
+    .add_edge("publish", END)
+    .interrupt_before("publish")
+    .set_checkpointer(Arc::new(checkpointer))
+    .compile()?;
+
+// First call pauses before "publish" runs.
+let err = graph.invoke_with_id("t1".into(), initial_state).await.unwrap_err();
+// StateGraphError::InterruptedAtBreakpoint { node: "publish" }
+
+// Resume — continues past the breakpoint instead of re-triggering it.
+let final_state = graph.resume("t1").await?;`}
+          python={`from flowgentra_ai.graph import StateGraph, END
+
+builder = StateGraph(PubState)
+builder.add_node("draft", draft_fn)
+builder.add_node("publish", publish_fn)
+builder.set_entry_point("draft")
+builder.add_edge("draft", "publish")
+builder.add_edge("publish", END)
+builder.interrupt_before("publish")
+builder.set_checkpointer("./checkpoints")  # or set_sqlite_checkpointer / set_postgres_checkpointer
+graph = builder.compile()
+
+try:
+    graph.invoke_with_thread("t1", initial_state)
+except Exception:
+    pass  # paused before "publish"
+
+# Resume — continues past the breakpoint instead of re-triggering it.
+final_state = graph.resume("t1")`}
+        />
+        <p style={{ color: '#8b949e', marginBottom: 16 }}>
+          <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3, fontSize: '0.9em' }}>interrupt_after</code> works
+          the same way but pauses once the named node has finished, before its successors run.
+        </p>
+      </Section>
+
+      <Section id="in-node-interrupt" title="In-Node Interrupt">
+        <p style={{ color: '#8b949e', marginBottom: 16 }}>
+          When the decision to pause depends on the node's own logic — e.g. "only ask for
+          approval if the draft mentions a competitor" — raise an interrupt from inside the node
+          instead of using a static breakpoint. The state at node entry is checkpointed; resuming
+          re-runs that same node so it can read whatever was injected.
+        </p>
+        <CodeBlock
+          rust={`use flowgentra_ai::core::state_graph::error::interrupt;
+
+async fn gate(state: &ApprovalState, _ctx: &Context) -> Result<ApprovalStateUpdate> {
+    match &state.approval {
+        Some(answer) => Ok(update! { approved: answer == "yes" }),
+        None => Err(interrupt(serde_json::json!({
+            "question": "Approve this draft?",
+            "doc": state.doc,
+        }))),
+    }
 }
+// Run pauses with StateGraphError::InterruptedByNode { node, payload }.
+// Resume with resume_with_update(thread_id, update) to inject the answer —
+// the "gate" node re-runs and reads state.approval.`}
+          python={`from flowgentra_ai import NodeInterrupt
 
-let human_node = HumanInTheLoop::new(|state: &MyState| {
-    format!("Task: {}\\nApprove this action?", state.task)
-});
+def gate(state):
+    if not state["approval"]:
+        raise NodeInterrupt({"question": "Approve this draft?", "doc": state["doc"]})
+    return {**state, "approved": state["approval"] == "yes"}
 
-let graph = StateGraph::<MyState>::builder()
-    .add_node("process", process_fn)
-    .add_node("human_review", human_node)
-    .add_node("execute", execute_fn)
-    .add_edge("process", "human_review")
-    .add_conditional_edge("human_review",
-        |state| if state.approved.unwrap_or(false) { "execute" } else { "process" })
-    .build()?;`}
-          python={`from flowgentra_ai.nodes import HumanInTheLoop
-from typing import TypedDict, Optional
+builder.add_node("gate", gate)
+builder.set_checkpointer("./checkpoints")
+graph = builder.compile()
 
-class MyState(TypedDict):
-    task: str
-    approved: Optional[bool]
-    human_feedback: Optional[str]
+try:
+    graph.invoke_with_thread("t1", {"doc": "draft-1", "approval": "", "approved": False})
+except NodeInterrupt as e:
+    payload = e.args[0]
+    print(payload["question"], payload["doc"])
 
-def review_prompt(state: MyState) -> str:
-    return f"Task: {state['task']}\\nApprove this action?"
-
-human_node = HumanInTheLoop(review_prompt)
-
-builder = StateGraph(MyState)
-builder.add_node("process", process_fn)
-builder.add_node("human_review", human_node)
-builder.add_node("execute", execute_fn)
-builder.add_edge("process", "human_review")
-builder.add_conditional_edge("human_review",
-    lambda state: "execute" if state.get("approved") else "process")
-graph = builder.compile()`}
+# Inject the human's answer — "gate" re-runs and reads state["approval"].
+result = graph.resume_with_state("t1", {"approval": "yes"})`}
         />
-
-        <h4 style={{ color: '#e6edf3', fontSize: '1.1rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>HumanInTheLoop Parameters</h4>
-        <div style={{
-          background: '#0d1117',
-          border: '1px solid #21262d',
-          borderRadius: 8,
-          padding: '20px',
-          marginBottom: 20
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', color: '#8b949e' }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Parameter</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Type</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Default</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>prompt_function</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>function</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Required</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Function that generates the review prompt from the current state</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>timeout</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>float</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>None</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Maximum time to wait for human response (seconds)</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>default_action</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>str</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>"reject"</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Action to take if timeout occurs ("approve", "reject", or "escalate")</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.9em' }}>notification_channel</td>
-                <td style={{ padding: '8px' }}>str</td>
-                <td style={{ padding: '8px' }}>None</td>
-                <td style={{ padding: '8px' }}>Channel for sending notifications (email, slack, etc.)</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </Section>
 
-      <Section id="approval-workflows" title="Approval Workflows">
+      <Section id="command" title="Command: unified resume">
         <p style={{ color: '#8b949e', marginBottom: 16 }}>
-          Common patterns for human approval in automated workflows.
-        </p>
-        <h3 style={{ color: '#e6edf3', fontSize: '1.25rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>Content Moderation</h3>
-        <CodeBlock
-          python={`def moderate_content(state):
-    content = state["generated_content"]
-    # Check for sensitive topics
-    if contains_sensitive_topics(content):
-        return {**state, "needs_review": True}
-    return {**state, "needs_review": False}
-
-def human_review(state):
-    if state["needs_review"]:
-        # Pause for human review
-        return HumanInTheLoop.review(
-            f"Review content: {state['generated_content'][:200]}..."
-        )
-    return state
-
-# Graph: generate -> moderate -> human_review -> publish`}
-        />
-
-        <h4 style={{ color: '#e6edf3', fontSize: '1.1rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>Content Moderation Functions</h4>
-        <div style={{
-          background: '#0d1117',
-          border: '1px solid #21262d',
-          borderRadius: 8,
-          padding: '20px',
-          marginBottom: 20
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', color: '#8b949e' }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Function</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Parameters</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Returns</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>contains_sensitive_topics(content)</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>content: str</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>bool</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Checks if content contains sensitive or inappropriate topics</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.9em' }}>HumanInTheLoop.review(prompt)</td>
-                <td style={{ padding: '8px' }}>prompt: str</td>
-                <td style={{ padding: '8px' }}>dict</td>
-                <td style={{ padding: '8px' }}>Initiates human review with the given prompt and returns approval decision</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <h3 style={{ color: '#e6edf3', fontSize: '1.25rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>Code Deployment</h3>
-        <CodeBlock
-          python={`def deploy_check(state):
-    changes = state["code_changes"]
-    risk_level = assess_risk(changes)
-
-    if risk_level == "high":
-        return {**state, "needs_approval": True}
-    elif risk_level == "medium":
-        return {**state, "needs_approval": True, "auto_approve": True}
-    else:
-        return {**state, "needs_approval": False}
-
-# High-risk changes require explicit approval
-# Medium-risk can auto-approve after 24h timeout
-# Low-risk deploys automatically`}
-        />
-
-        <h4 style={{ color: '#e6edf3', fontSize: '1.1rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>Code Deployment Functions</h4>
-        <div style={{
-          background: '#0d1117',
-          border: '1px solid #21262d',
-          borderRadius: 8,
-          padding: '20px',
-          marginBottom: 20
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', color: '#8b949e' }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Function</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Parameters</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Returns</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>assess_risk(changes)</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>changes: List[str]</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>str</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Assesses risk level of code changes ("low", "medium", "high")</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.9em' }}>deploy_check(state)</td>
-                <td style={{ padding: '8px' }}>state: dict</td>
-                <td style={{ padding: '8px' }}>dict</td>
-                <td style={{ padding: '8px' }}>Evaluates deployment state and sets approval requirements</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </Section>
-
-      <Section id="intervention-points" title="Intervention Points">
-        <p style={{ color: '#8b949e', marginBottom: 16 }}>
-          Strategic places to insert human intervention in your workflows.
+          <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3, fontSize: '0.9em' }}>Command</code> unifies
+          the three things you may want to do when resuming — mirrors LangGraph's
+          <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3, fontSize: '0.9em' }}>Command(resume=, update=, goto=)</code>:
         </p>
         <ul style={{ color: '#8b949e', lineHeight: 1.7, paddingLeft: 20, marginBottom: 16 }}>
-          <li><strong style={{ color: '#e6edf3' }}>Before external actions:</strong> API calls, database writes, file operations</li>
-          <li><strong style={{ color: '#e6edf3' }}>Quality gates:</strong> After content generation, before publishing</li>
-          <li><strong style={{ color: '#e6edf3' }}>Error recovery:</strong> When automated retries fail</li>
-          <li><strong style={{ color: '#e6edf3' }}>Edge cases:</strong> When confidence scores are low</li>
-          <li><strong style={{ color: '#e6edf3' }}>Cost controls:</strong> Before expensive operations</li>
+          <li><code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>update</code> — merge a partial state update before resuming (same as <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>resume_with_state</code>), validated against the schema.</li>
+          <li><code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>goto</code> — resume at an arbitrary node instead of the checkpoint's natural successor.</li>
+          <li><code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>resume</code> — hand a value to the paused node via its context (Rust-authored nodes only — see below).</li>
         </ul>
         <CodeBlock
-          python={`def confidence_check(state):
-    score = state.get("confidence", 0)
-    if score < 0.8:
-        return {**state, "needs_human": True,
-                "reason": f"Low confidence: {score:.2f}"}
-    return {**state, "needs_human": False}
+          rust={`use flowgentra_ai::core::state_graph::Command;
 
-def human_intervention(state):
-    if state.get("needs_human"):
-        reason = state.get("reason", "Manual review required")
-        return HumanInTheLoop.review(f"Review needed: {reason}")
-    return state`}
+// Skip straight to "cleanup", ignoring what the checkpoint says comes next.
+let state = graph.resume_with_command("t1", Command::default().with_goto("cleanup")).await?;
+
+// Hand a value to the paused node; it reads ctx.resume_value().
+let state = graph.resume_with_command("t1", Command::resume(serde_json::json!("yes"))).await?;`}
+          python={`from flowgentra_ai.graph import Command
+
+# Skip straight to "cleanup", ignoring what the checkpoint says comes next.
+result = graph.resume_command("t1", Command(goto="cleanup"))
+
+# Give a Python node its answer — via update (see limitation below).
+result = graph.resume_command("t1", Command(update={"approval": "yes"}))
+
+# An unknown update key or goto target raises immediately, before touching state.
+try:
+    graph.resume_command("t1", Command(update={"nope": 1}))
+except KeyError as e:
+    print(e)  # "key 'nope' is not declared in the state schema"`}
         />
-
-        <h4 style={{ color: '#e6edf3', fontSize: '1.1rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>Intervention Functions</h4>
-        <div style={{
-          background: '#0d1117',
-          border: '1px solid #21262d',
-          borderRadius: 8,
-          padding: '20px',
-          marginBottom: 20
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', color: '#8b949e' }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Function</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Parameters</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Returns</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>confidence_check(state)</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>state: dict</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>dict</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Checks confidence score and flags for human intervention if below threshold</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.9em' }}>human_intervention(state)</td>
-                <td style={{ padding: '8px' }}>state: dict</td>
-                <td style={{ padding: '8px' }}>dict</td>
-                <td style={{ padding: '8px' }}>Handles human intervention workflow based on state flags</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
       </Section>
 
-      <Section id="feedback-loops" title="Feedback & Corrections">
+      <Section id="python-node-limits" title="Python node limitation: resume= vs update=">
         <p style={{ color: '#8b949e', marginBottom: 16 }}>
-          Use human feedback to improve future automation.
-        </p>
-        <CodeBlock
-          python={`def collect_feedback(state):
-    if state.get("human_feedback"):
-        feedback = state["human_feedback"]
-        # Store feedback for model training
-        save_feedback(feedback, state["original_input"])
-
-        # Update the response based on feedback
-        corrected_response = apply_feedback_corrections(
-            state["generated_response"], feedback
-        )
-        return {**state, "final_response": corrected_response}
-
-    return {**state, "final_response": state["generated_response"]}
-
-def apply_feedback_corrections(response, feedback):
-    # Use feedback to improve response
-    # Could involve another LLM call or rule-based corrections
-    return improved_response`}
-        />
-
-        <h4 style={{ color: '#e6edf3', fontSize: '1.1rem', fontWeight: 600, marginBottom: 12, marginTop: 20 }}>Feedback Functions</h4>
-        <div style={{
-          background: '#0d1117',
-          border: '1px solid #21262d',
-          borderRadius: 8,
-          padding: '20px',
-          marginBottom: 20
-        }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', color: '#8b949e' }}>
-            <thead>
-              <tr>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Function</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Parameters</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Returns</th>
-                <th style={{ textAlign: 'left', padding: '8px', borderBottom: '1px solid #21262d', color: '#e6edf3' }}>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>collect_feedback(state)</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>state: dict</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>dict</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Processes human feedback and applies corrections to improve responses</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d', fontFamily: 'monospace', fontSize: '0.9em' }}>save_feedback(feedback, input)</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>feedback: str, input: str</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>None</td>
-                <td style={{ padding: '8px', borderBottom: '1px solid #21262d' }}>Stores feedback data for future model training and improvement</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '8px', fontFamily: 'monospace', fontSize: '0.9em' }}>apply_feedback_corrections(response, feedback)</td>
-                <td style={{ padding: '8px' }}>response: str, feedback: str</td>
-                <td style={{ padding: '8px' }}>str</td>
-                <td style={{ padding: '8px' }}>Applies human feedback corrections to improve the response</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <p style={{ color: '#8b949e', marginBottom: 16 }}>
-          Human feedback creates a virtuous cycle: each intervention improves the system's ability to handle similar cases automatically in the future.
+          Rust nodes receive a <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>Context</code> alongside
+          state, so <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>Command.resume(value)</code> can
+          reach them via <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>ctx.resume_value()</code>.
+          Python node functions receive only <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>state: dict</code> —
+          there's no context object today — so a <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>resume=</code> value
+          never reaches a pure-Python node. For Python nodes, always hand the human's answer through{' '}
+          <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>Command(update={'{'}"field": value{'}'})</code>{' '}
+          (or the older <code style={{ background: '#161b22', padding: '2px 6px', borderRadius: 3 }}>resume_with_state</code>) instead — both are
+          fully supported and is what every example above uses.
         </p>
       </Section>
     </DocLayout>
