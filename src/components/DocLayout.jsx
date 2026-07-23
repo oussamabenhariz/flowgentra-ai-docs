@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useLocation, Link } from 'react-router-dom'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 // Ordered flat list — routes MUST match App.jsx exactly
 export const ALL_DOC_PAGES = [
@@ -71,7 +73,18 @@ const sidebarLinks = GROUPS.map(group => ({
   links: ALL_DOC_PAGES.filter(p => p.group === group),
 }))
 
-export default function DocLayout({ children, anchors = [] }) {
+// Renders a markdown string (the `content` prop) into themed HTML. Some pages
+// pass their whole body as a markdown string via `content=` instead of JSX
+// children; without this those pages rendered blank (the prop was ignored).
+function MarkdownContent({ content }) {
+  return (
+    <div className="doc-markdown">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+    </div>
+  )
+}
+
+export default function DocLayout({ children, content, anchors = [] }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const location = useLocation()
 
@@ -167,7 +180,7 @@ export default function DocLayout({ children, anchors = [] }) {
           ☰ Menu
         </button>
 
-        {children}
+        {content ? <MarkdownContent content={content} /> : children}
 
         {/* Prev / Next navigation */}
         {(prevPage || nextPage) && (

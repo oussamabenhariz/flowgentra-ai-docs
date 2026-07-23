@@ -393,8 +393,8 @@ for call in llm_calls:
 # Display costs
 cost = round(tracker.total_cost(), 4)
 batch_cost = round(tracker.estimate_batch_cost(1000), 2)
-print(f"Cost per call: \\${cost}")
-print(f"Cost per 1000 calls: \\${batch_cost}")
+print(f"Cost per call: \${cost}")
+print(f"Cost per 1000 calls: \${batch_cost}")
 `} />
       </section>
 

@@ -6,6 +6,7 @@ const anchors = [
   { id: 'init-tracing',   label: 'Enable Tracing' },
   { id: 'execution-tracer', label: 'ExecutionTracer' },
   { id: 'visualization',  label: 'Graph Visualization' },
+  { id: 'dev-viewer',     label: 'Live Dev Viewer' },
   { id: 'token-usage',    label: 'Token Usage & Cost' },
   { id: 'debugging',      label: 'Debugging Tips' },
 ]
@@ -168,6 +169,37 @@ display(HTML(f"""
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 """))`}</pre>
         </Callout>
+      </Section>
+
+      <Section id="dev-viewer" title="Live Dev Viewer">
+        <p style={muted}>
+          Static diagrams show the graph's shape; the dev viewer shows it <strong style={{ color: '#e6edf3' }}>running</strong>.
+          <code style={inlineCode}>serve_dev(port)</code> starts a small local web server that serves a
+          self-contained page — the graph's nodes plus a live feed of execution events over Server-Sent Events.
+          Open the URL, then call <code style={inlineCode}>invoke()</code> from the same process and watch nodes light up in real time.
+          It is non-blocking (spawns in the background) and needs nothing installed — the page works offline.
+          Not a hosted product: no state editing, no time-travel, just a live view of what's happening.
+        </p>
+        <CodeBlock
+          rust={`let graph = builder.build()?;
+
+let handle = graph.serve_dev(7878);
+println!("dev viewer: {}", handle.url());   // http://127.0.0.1:7878/
+
+// Watch these run live in the browser:
+graph.invoke(initial_state.clone()).await?;
+graph.invoke(other_state).await?;
+
+handle.shutdown();   // dropping the handle does NOT stop it — stop explicitly`}
+          python={`graph = builder.compile()
+
+handle = graph.serve_dev(7878)
+print("dev viewer:", handle.url)   # open http://127.0.0.1:7878/ in a browser
+
+graph.invoke({"input": "hello"})   # watch it light up live
+
+handle.shutdown()`}
+        />
       </Section>
 
       <Section id="token-usage" title="Token Usage & Cost Estimation">

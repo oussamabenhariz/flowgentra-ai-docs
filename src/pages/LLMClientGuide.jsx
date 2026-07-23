@@ -7,6 +7,8 @@ const anchors = [
   { id: 'sending-messages', label: 'Sending Messages' },
   { id: 'tool-calling', label: 'Tool Calling' },
   { id: 'streaming', label: 'Streaming' },
+  { id: 'chains', label: 'Chains (prompt → LLM)' },
+  { id: 'testing', label: 'Testing with MockLLM' },
 ]
 
 export default function LLMGuide() {
@@ -167,12 +169,92 @@ if response.has_tool_calls():
         <p style={{ color: '#8b949e', marginBottom: 16 }}>
           For real-time responses, use streaming. The client yields chunks as they're generated.
         </p>
-        <CodeBlock python={`# Streaming responses
+        <CodeBlock python={`# Streaming responses — chat_stream yields plain string chunks
 for chunk in client.chat_stream([
     Message.user("Write a short story")
 ]):
-    print(chunk.content, end="", flush=True)
+    print(chunk, end="", flush=True)
 print()  # New line at end`} />
+      </Section>
+
+      <Section id="chains" title="Chains (prompt → LLM)">
+        <p style={{ color: '#8b949e', marginBottom: 16 }}>
+          For the common "fill in a prompt, call the LLM, maybe parse the result" case, you don't need
+          a full graph. A <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>Chain</code> pipes a{' '}
+          <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>PromptTemplate</code> into an LLM. Reach for a{' '}
+          <a href="/docs/graphs" style={{ color: '#58a6ff' }}>StateGraph</a> the moment you need branching, loops, retries, or persistence.
+        </p>
+        <CodeBlock
+          rust={`use flowgentra_ai::core::llm::{Chain, PromptTemplate};
+use std::sync::Arc;
+
+let prompt = PromptTemplate::new("Translate '{text}' to French.");
+let chain = Chain::new(prompt, Arc::new(client));
+
+let reply = chain.invoke(&[("text", "Hello")]).await?;
+println!("{}", reply.content);
+
+// Parse the reply as JSON in one step:
+let data = chain.invoke_structured(&[("text", "Hello")]).await?;`}
+          python={`from flowgentra_ai.llm import Chain, PromptTemplate, JsonOutputParser
+
+prompt = PromptTemplate("Translate '{text}' to French.")
+
+# Two-stage helper (prompt -> LLM):
+chain = Chain(prompt, client)
+reply = chain.invoke({"text": "Hello"})
+print(reply.content)
+
+# Or compose freely with the | operator (flowgentra_ai.chain) — LangChain's LCEL style.
+# Any stage works: PromptTemplate, LLM, JsonOutputParser/ListOutputParser, or a plain function.
+from flowgentra_ai.chain import Chain as Pipe   # (also usable directly as the | result)
+pipeline = PromptTemplate("List 3 colors of the {thing}, as JSON.") | client | JsonOutputParser()
+colors = pipeline.invoke({"thing": "ocean"})   # -> ["blue", "teal", "navy"]
+
+# Explicit alternative, no operator overloading:
+# Chain.sequence([prompt, client, JsonOutputParser()]).invoke({...})`}
+        />
+      </Section>
+
+      <Section id="testing" title="Testing with MockLLM">
+        <p style={{ color: '#8b949e', marginBottom: 16 }}>
+          <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>MockLLM</code> is a scripted, offline LLM for
+          deterministic tests — no network, no API key. Script its replies, call{' '}
+          <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>.as_llm()</code>, and drop the result in anywhere a
+          real LLM is expected (agents, <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>chat_with_tools</code>, a graph node, a Chain).
+        </p>
+        <CodeBlock
+          rust={`use flowgentra_ai::core::llm::{MockLLM, Message, LLM};
+use std::sync::Arc;
+
+// Fixed reply to everything:
+let llm = Arc::new(MockLLM::always("Bonjour"));
+
+// Or match on content, with a fallback:
+let llm = Arc::new(
+    MockLLM::new()
+        .when_contains("weather", "It is sunny")
+        .otherwise("I don't know")
+);
+
+// Or a scripted multi-step sequence (repeats the last once exhausted):
+let llm = Arc::new(MockLLM::sequence(vec!["thinking...", "final answer"]).with_usage());
+assert_eq!(llm.chat(vec![Message::user("go")]).await?.content, "thinking...");`}
+          python={`from flowgentra_ai.llm import MockLLM, Message
+
+# Match on content, with a fallback:
+mock = MockLLM()
+mock.when_contains("weather", "It is sunny")
+mock.otherwise("I don't know")
+llm = mock.as_llm()   # -> a real LLM
+
+assert llm.chat([Message.user("what's the weather?")]).content == "It is sunny"
+assert mock.call_count() == 1
+
+# Fixed reply, or a scripted sequence for a multi-step agent test:
+llm = MockLLM.always("hello").as_llm()
+scripted = MockLLM.sequence(["step 1 done", "step 2 done"]).as_llm()`}
+        />
       </Section>
     </DocLayout>
   )

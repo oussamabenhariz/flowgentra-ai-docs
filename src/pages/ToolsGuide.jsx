@@ -142,6 +142,46 @@ print(result)
 #  "humidity": 72, "description": "overcast clouds", "wind_speed": 4.1}`}
         />
 
+        <h3 style={{ color: '#e6edf3', fontSize: '1.25rem', fontWeight: 600, marginBottom: 12, marginTop: 24 }}>Python: the <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>@tool</code> decorator</h3>
+        <p style={{ color: '#8b949e', marginBottom: 16 }}>
+          To turn your own Python function into a tool, decorate it with <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>@tool</code>.
+          Since 0.3.3 the JSON Schema the LLM sees is <strong style={{ color: '#e6edf3' }}>inferred automatically</strong> — parameter
+          types from your type hints (an <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>Optional[...]</code> or a default value
+          marks a parameter optional), and per-parameter descriptions from a Google-style <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>Args:</code> docstring
+          block. No more hand-writing the schema to match the signature.
+        </p>
+        <CodeBlock
+          python={`from flowgentra_ai.tools import tool, ToolRegistry
+from typing import Optional
+
+@tool(name="html_parser", description="Extract clean text from raw HTML.")
+def html_parser(html: str, strip_scripts: bool = True, max_len: Optional[int] = None) -> str:
+    """Args:
+        html: Raw HTML source to clean.
+        strip_scripts: Remove <script> tags before extracting text.
+        max_len: Optional maximum output length.
+    """
+    from bs4 import BeautifulSoup
+    text = BeautifulSoup(html, "html.parser").get_text()
+    return text[:max_len] if max_len else text
+
+# The inferred schema (no parameters= argument needed):
+#   html          -> {"type": "string",  "description": "Raw HTML source to clean."}   (required)
+#   strip_scripts -> {"type": "boolean", "description": "Remove <script> tags ..."}    (has default -> optional)
+#   max_len       -> {"type": "integer", "description": "Optional maximum output length."}  (Optional -> optional)
+
+registry = ToolRegistry.with_builtins()
+registry.register(html_parser)
+
+# Hand every tool (built-in + custom) straight to the LLM:
+tool_defs = registry.to_tool_definitions()
+response = llm.chat_with_tools([Message.user("Clean this page")], tool_defs)`}
+        />
+        <p style={{ color: '#8b949e', marginBottom: 16 }}>
+          You can still pass <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>parameters=</code> and <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>required=</code> explicitly
+          when a parameter can not be type-hinted — inference only kicks in when <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>parameters=</code> is omitted.
+        </p>
+
         <h3 style={{ color: '#e6edf3', fontSize: '1.25rem', fontWeight: 600, marginBottom: 12, marginTop: 24 }}>Tool Definition Schema</h3>
         <div style={tableStyle}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>

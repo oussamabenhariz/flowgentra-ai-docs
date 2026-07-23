@@ -288,26 +288,38 @@ async fn main() -> Result<()> {
 }`,
     },
     python: {
-      signature: `agent.run() -> dict
+      signature: `# Sync (GIL released while the Rust engine runs):
+agent.run() -> dict
 agent.run_with_thread(thread_id: str) -> dict
-agent.set_state(key, value) -> None`,
-      description: 'Both calls are synchronous (the GIL is released while the Rust engine runs). Set state fields with `agent.set_state(key, value)` before each call; read the final state from the returned dict or `agent.state`. For agents created via `Agent.create(...)`, use `run_with_input("...")` instead.',
+agent.set_state(key, value) -> None
+
+# Async (since 0.3.3) — native awaitables, no worker-thread bounce:
+await agent.arun() -> dict
+await agent.arun_with_thread(thread_id: str) -> dict
+await agent.arun_with_input(text: str) -> dict   # for Agent.create() agents`,
+      description: 'Set state fields with `agent.set_state(key, value)` before each call; read the final state from the returned dict or `agent.state`. The sync methods release the GIL while the Rust engine runs. Since 0.3.3 there are async counterparts — `arun` / `arun_with_thread` / `arun_with_input` — native awaitables driven by the tokio runtime bridged to your asyncio loop (the same mechanism as `CompiledGraph.ainvoke`): no worker-thread bounce, and independent agents can run concurrently under `asyncio.gather`. For agents created via `Agent.create(...)`, use `run_with_input("...")` / `arun_with_input("...")`.',
       params: [
         { name: 'thread_id', type: 'str', description: 'Unique ID for this conversation thread.' },
       ],
       returns: 'dict — final state after execution',
-      example: `from flowgentra_ai.agent import Agent
+      example: `import asyncio
+from flowgentra_ai.agent import Agent
 
 agent = Agent.from_config_path("agent.yaml")
 
-# Turn 1 — set state fields before each run
+# Sync multi-turn — state reloads from the thread's checkpoint each call
 agent.set_state("user_input", "My name is Alice.")
 agent.run_with_thread("user-42")
-
-# Turn 2 — state is reloaded from the thread's checkpoint
 agent.set_state("user_input", "What's my name?")
-result = agent.run_with_thread("user-42")
-print(result.get("reply"))  # "Your name is Alice."`,
+print(agent.run_with_thread("user-42").get("reply"))  # "Your name is Alice."
+
+# Async — await it, or run several agents concurrently
+async def main():
+    agent.set_state("user_input", "Summarize the news.")
+    result = await agent.arun()
+    print(result.get("reply"))
+
+asyncio.run(main())`,
     },
   },
 
@@ -1121,6 +1133,60 @@ tracer.clear()  # reset for next run`,
     },
   },
 
+  // ─── OBSERVABILITY: LOCAL DEV VIEWER ─────────────────────────────────────────
+  {
+    id: 'dev-server',
+    topic: 'observability',
+    name: 'Local Dev Viewer (serve_dev)',
+    summary: 'Watch a graph run live in the browser — its nodes and a real-time feed of execution events. Not a hosted product: no state editing, no time-travel. The smallest thing that is actually useful for watching invoke() happen.',
+    rust: {
+      signature: `let handle = graph.serve_dev(port);   // non-blocking, spawns in background
+handle.url();                         // http://127.0.0.1:<port>/
+handle.shutdown();`,
+      description: 'Starts a background HTTP server serving a self-contained, offline viewer at `/`, the graph structure as JSON at `/graph`, and a Server-Sent-Events feed of `ExecutionEvent`s at `/events`. Open the URL, then call `invoke()` from anywhere in the same process — the browser updates in real time (nodes highlight as they start/finish; events stream into a log). Returns a `DevServerHandle`; dropping it does not stop the server — call `shutdown()` explicitly.',
+      params: [
+        { name: 'port', type: 'u16', description: 'Port to bind on 127.0.0.1.' },
+      ],
+      returns: 'DevServerHandle ( .url() / .shutdown() )',
+      example: `let graph = StateGraph::<MyState>::builder()
+    /* … */
+    .compile()?;
+
+let handle = graph.serve_dev(7878);
+println!("dev viewer: {}", handle.url());
+
+// Watch these happen live in the browser:
+graph.invoke(initial_state.clone()).await?;
+graph.invoke(other_state).await?;
+
+handle.shutdown();`,
+    },
+    python: {
+      signature: `handle = graph.serve_dev(port)   # non-blocking
+handle.url                       # "http://127.0.0.1:<port>/"
+handle.shutdown()`,
+      description: 'Same local viewer, exposed on `CompiledGraph`. Starts a background server and returns immediately, so you can start it and then call `invoke()` normally — the browser shows the graph and a live event feed. Returns a `DevServerHandle` with a `url` property and a `shutdown()` method. Nothing to install; the viewer page is self-contained and works offline.',
+      params: [
+        { name: 'port', type: 'int', description: 'Port to bind on 127.0.0.1.' },
+      ],
+      returns: 'DevServerHandle (.url / .shutdown())',
+      example: `from flowgentra_ai.graph import StateGraph, END
+
+builder = StateGraph(MyState)
+builder.add_node("work", my_step)
+builder.set_entry_point("work")
+builder.add_edge("work", END)
+graph = builder.compile()
+
+handle = graph.serve_dev(7878)
+print("dev viewer:", handle.url)   # open this in a browser
+
+graph.invoke({...})   # watch it light up live
+
+handle.shutdown()`,
+    },
+  },
+
   // ─── DOCUMENT LOADERS ────────────────────────────────────────────────────────
   {
     id: 'document-loaders',
@@ -1487,6 +1553,63 @@ builder.add_conditional_edges("agent", check_tools_condition, {
     "tools": "tools", "__end__": END,
 })
 builder.add_edge("tools", "agent")`,
+    },
+  },
+
+  // ─── CUSTOM TOOLS: @tool DECORATOR & SCHEMA INFERENCE ────────────────────────
+  {
+    id: 'custom-tools',
+    topic: 'tools',
+    name: 'Custom Tools (@tool + schema inference)',
+    summary: 'Turn a Python function into a tool. The JSON Schema the LLM sees is inferred from your type hints and docstring — no hand-writing parameter schemas.',
+    rust: {
+      signature: `impl Tool for MyTool { /* name, description, input_schema, call */ }`,
+      description: 'In Rust, a custom tool implements the `Tool` trait: return a `ToolDefinition` (name, description, and an `input_schema` built with the `JsonSchema` helpers) from `definition()`, and do the work in `call()`. There is no decorator — the schema is written explicitly via `JsonSchema::object().property(...)`. Register the tool with `registry.register(name, Arc::new(tool))`.',
+      params: [
+        { name: 'definition()', type: 'fn -> ToolDefinition', description: 'Name, description, and JSON input schema.' },
+        { name: 'call(args)', type: 'async fn', description: 'Executes the tool against parsed arguments.' },
+      ],
+      returns: 'Arc<dyn Tool> — register it in a ToolRegistry',
+      example: `use flowgentra_ai::core::tools::{Tool, ToolDefinition, JsonSchema};
+
+// definition() returns name + description + explicit input schema;
+// call() runs the tool. See the Tools guide for a full impl.`,
+    },
+    python: {
+      signature: `@tool(name="...", description="...")   # parameters inferred from the signature
+def my_tool(arg: str, count: int = 1) -> str: ...
+
+registry.register(my_tool)
+registry.to_tool_definitions()   # built-in + custom, ready for chat_with_tools()`,
+      description: 'Decorate any function with `@tool`. Since 0.3.3 the JSON Schema is inferred automatically: parameter types come from your type hints (`Optional[T]` or a default → not required), and per-parameter descriptions come from a Google-style `Args:` docstring block — no more duplicating the signature by hand. You can still pass `parameters=` / `required=` explicitly when a param can not be type-hinted. `registry.to_tool_definitions()` returns every registered tool (built-in + custom) as a `ToolDefinition` list, ready to hand straight to `LLM.chat_with_tools()`.',
+      params: [
+        { name: 'name / description', type: 'str', description: 'Shown to the LLM.' },
+        { name: 'parameters / required', type: 'optional', description: 'Override inference; omit to infer from hints + docstring.' },
+      ],
+      returns: 'Decorated callable (register it in a ToolRegistry)',
+      example: `from flowgentra_ai.tools import tool, ToolRegistry
+from typing import Optional
+
+@tool(name="html_parser", description="Extract clean text from raw HTML.")
+def html_parser(html: str, strip_scripts: bool = True, max_len: Optional[int] = None) -> str:
+    """Args:
+        html: Raw HTML source to clean.
+        strip_scripts: Remove <script> tags before extracting text.
+        max_len: Optional maximum output length.
+    """
+    ...
+
+# Inferred schema (no parameters= needed):
+# {"type": "object",
+#  "properties": {
+#    "html": {"type": "string", "description": "Raw HTML source to clean."},
+#    "strip_scripts": {"type": "boolean", "description": "Remove <script> tags before extracting text."},
+#    "max_len": {"type": "integer", "description": "Optional maximum output length."}},
+#  "required": ["html"]}          # strip_scripts/max_len have defaults -> optional
+
+registry = ToolRegistry.with_builtins()
+registry.register(html_parser)
+tool_defs = registry.to_tool_definitions()   # -> pass to llm.chat_with_tools(msgs, tool_defs)`,
     },
   },
 
@@ -2351,20 +2474,23 @@ assert len(calls) == 1`,
     name: 'MockLLM (offline testing)',
     summary: 'A scripted, offline LLM for deterministic tests: fixed replies, ordered sequences, and substring-matched responses — with optional token usage and streaming.',
     rust: {
-      signature: `MockLLM::always(reply: &str)
-MockLLM::sequence(replies: Vec<&str>)
-MockLLM::builder().when_contains("plan", "…").otherwise("…").build()`,
-      description: 'Implements the `LLM` trait without any network access. `always` returns one fixed reply; `sequence` returns replies in order (repeating the last); the builder matches on message content with `when_contains` / `when` and falls back to `otherwise`. `with_usage(prompt, completion)` attaches token counts so budget/cost paths are testable; `call_count()` asserts how many calls were made. Rust-only: not exposed to Python (drive tests through deterministic node functions there).',
+      signature: `MockLLM::new()                          // empty; falls back to "" until otherwise() is set
+MockLLM::always(reply)                  // one fixed reply for every call
+MockLLM::sequence(vec!["a", "b"])       // replies in order (repeats the last)
+  .when_contains("weather", "sunny")    // reply when the latest user msg contains a needle
+  .when(|msgs| { /* … */ Some("…".into()) })  // arbitrary predicate over history
+  .otherwise("fallback")                // reply when no matcher fires
+  .with_usage()                         // report token usage (word-count estimate)`,
+      description: 'A scripted, offline `LLM` implementation for deterministic tests — no network, no credentials. Compose matchers with the builder methods: `always` returns one reply; `sequence` returns replies in order (repeating the last once exhausted); `when_contains` / `when` match on message content; `otherwise` is the fallback. `with_usage()` makes `chat_with_usage` report a rough token estimate so budget/cost paths are testable, and `call_count()` asserts how many times it was invoked. Drop it in anywhere an `Arc<dyn LLM>` is expected.',
       params: [
-        { name: 'reply', type: '&str', description: 'The scripted assistant response.' },
+        { name: 'reply / replies', type: 'impl Into<String>', description: 'The scripted assistant response(s).' },
+        { name: 'needle', type: 'impl Into<String>', description: 'Substring to match in the latest user message.' },
       ],
-      returns: 'MockLLM (implements LLM)',
-      example: `use flowgentra_ai::core::llm::mock::MockLLM;
+      returns: 'MockLLM (implements the LLM trait)',
+      example: `use flowgentra_ai::core::llm::{MockLLM, Message, LLM};
 use std::sync::Arc;
 
-let llm = Arc::new(
-    MockLLM::sequence(vec!["step one", "step two"]).with_usage(10, 5)
-);
+let llm = Arc::new(MockLLM::sequence(vec!["step one", "step two"]).with_usage());
 
 let first  = llm.chat(vec![Message::user("go")]).await?;
 let second = llm.chat(vec![Message::user("next")]).await?;
@@ -2373,13 +2499,90 @@ assert_eq!(second.content, "step two");
 assert_eq!(llm.call_count(), 2);`,
     },
     python: {
-      signature: '— not exposed —',
-      description: 'MockLLM is Rust-only. For deterministic Python tests, use plain node functions (no LLM call) or point LLMConfig at a local stub server. This asymmetry is intentional: the Python test suite exercises the FFI boundary with pure-Python nodes.',
-      params: [],
-      returns: '—',
-      example: `# Python tests use deterministic node functions instead:
-def fake_llm_node(state):
-    return {"reply": "scripted answer"}`,
+      signature: `MockLLM()                                  # empty; "" until otherwise() is set
+MockLLM.always("hello")                    # one fixed reply
+MockLLM.sequence(["step 1", "step 2"])     # in order (repeats the last)
+mock.when_contains("weather", "It is sunny")
+mock.otherwise("I don't know")
+mock.with_usage()                          # report token usage
+mock.call_count()                          # how many times it was called
+mock.as_llm()  # -> LLM, drop-in anywhere a real LLM is expected`,
+      description: 'The Rust MockLLM, fully exposed to Python (since 0.3.3). Build it with the class methods / instance setters, then call `.as_llm()` to get an `LLM` usable anywhere a real one is — agents, `chat_with_tools`, `StateGraph` context, or a `Chain`. No network or API key. (The arbitrary-predicate `when()` form is Rust-only — a Python callback can not cross the FFI boundary here; use `when_contains` or `sequence`.)',
+      params: [
+        { name: 'reply / replies', type: 'str | list[str]', description: 'The scripted assistant response(s).' },
+        { name: 'needle', type: 'str', description: 'Substring to match in the latest user message.' },
+      ],
+      returns: 'MockLLM (call .as_llm() for a drop-in LLM)',
+      example: `from flowgentra_ai.llm import MockLLM, Message
+
+mock = MockLLM()
+mock.when_contains("weather", "It is sunny")
+mock.otherwise("I don't know")
+llm = mock.as_llm()
+
+assert llm.chat([Message.user("what's the weather?")]).content == "It is sunny"
+assert llm.chat([Message.user("hi")]).content == "I don't know"
+assert mock.call_count() == 2
+
+# Scripted sequence for a multi-step agent test:
+scripted = MockLLM.sequence(["thinking...", "final answer"]).as_llm()`,
+    },
+  },
+
+  // ─── LLM: CHAIN COMPOSITION ──────────────────────────────────────────────────
+  {
+    id: 'chain',
+    topic: 'llm',
+    name: 'Chain (prompt → LLM composition)',
+    summary: 'Sugar for the common "fill a prompt, call the LLM, parse the result" pipeline — without building a graph. Use StateGraph for anything with branching, loops, retries, or persistence.',
+    rust: {
+      signature: `Chain::new(prompt: PromptTemplate, llm: Arc<dyn LLM>)
+chain.invoke(&[("var", "value")]).await            -> Message
+chain.invoke_structured(&[("var", "value")]).await -> serde_json::Value`,
+      description: 'A `PromptTemplate` piped into an `LLM`. `invoke` formats the prompt with the given variables, sends it as a single user message, and returns the reply. `invoke_structured` additionally parses the reply as JSON (via `chat_structured`). It is deliberately just these two stages — reach for `StateGraph` the moment you need more.',
+      params: [
+        { name: 'prompt', type: 'PromptTemplate', description: 'Template with `{variable}` placeholders.' },
+        { name: 'llm', type: 'Arc<dyn LLM>', description: 'Any LLM — a real provider client or a MockLLM.' },
+      ],
+      returns: 'Message (invoke) / serde_json::Value (invoke_structured)',
+      example: `use flowgentra_ai::core::llm::{Chain, MockLLM, PromptTemplate};
+use std::sync::Arc;
+
+let prompt = PromptTemplate::new("Translate '{text}' to French.");
+let llm = Arc::new(MockLLM::always("Bonjour"));
+let chain = Chain::new(prompt, llm);
+
+let reply = chain.invoke(&[("text", "Hello")]).await?;
+assert_eq!(reply.content, "Bonjour");`,
+    },
+    python: {
+      signature: `# Two-stage helper (fixed prompt -> LLM):
+Chain(prompt, llm).invoke({"text": "Hello"})            # -> Message
+Chain(prompt, llm).invoke_structured({"text": "Hello"}) # -> parsed JSON
+
+# LCEL-style pipe composition (flowgentra_ai.chain), arbitrary stages:
+pipeline = prompt | llm | JsonOutputParser()
+pipeline.invoke({"text": "Hello"})
+Chain.sequence([prompt, llm, parser]).invoke({...})     # explicit, no operator`,
+      description: 'Two flavors. `flowgentra_ai.llm.Chain(prompt, llm)` is the fixed two-stage prompt → LLM helper (Rust-backed). `flowgentra_ai.chain` adds LCEL-style composition: pipe any stages with `|` — a `PromptTemplate`, an `LLM` (or `MockLLM.as_llm()`), a `JsonOutputParser` / `ListOutputParser`, or any plain `f(x) -> y` callable — or list them explicitly via `Chain.sequence([...])`. Each stage\'s output feeds the next. `PromptTemplate`, `JsonOutputParser`, and `ListOutputParser` are re-exported from `flowgentra_ai.llm`.',
+      params: [
+        { name: 'prompt', type: 'PromptTemplate', description: 'Template with `{variable}` placeholders.' },
+        { name: 'llm', type: 'LLM', description: 'Any LLM — a provider client or `MockLLM.as_llm()`.' },
+        { name: 'stages (pipe form)', type: 'PromptTemplate | LLM | OutputParser | Callable', description: 'Composed left-to-right with `|` or via `Chain.sequence([...])`.' },
+      ],
+      returns: 'Message / parsed value (depends on the final stage)',
+      example: `from flowgentra_ai.llm import LLM, PromptTemplate, JsonOutputParser, MockLLM
+
+prompt = PromptTemplate("List 3 colors of the {thing}, as a JSON array.")
+llm = MockLLM.always('["blue", "teal", "navy"]').as_llm()
+
+# Pipe operator — reads like LangChain's LCEL:
+pipeline = prompt | llm | JsonOutputParser()
+colors = pipeline.invoke({"thing": "ocean"})
+assert colors == ["blue", "teal", "navy"]
+
+# A plain function is a valid stage too:
+shout = prompt | llm | (lambda msg: msg.content.upper())`,
     },
   },
 

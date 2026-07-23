@@ -12,6 +12,7 @@ const anchors = [
   { id: 'self-ask-with-search',   label: 'SelfAskWithSearch' },
   { id: 'react-docstore',         label: 'ReactDocstore' },
   { id: 'config-driven',          label: 'Config-Driven Agents' },
+  { id: 'async-execution',        label: 'Async Execution' },
   { id: 'memory-aware',           label: 'MemoryAwareAgent' },
 ]
 
@@ -363,7 +364,41 @@ tools:
         <CodeBlock python={`from flowgentra_ai.agent import Agent
 
 agent = Agent.from_config_path("agent.yaml")
-result = agent.run({"input": "What is 2 + 2?"})`} />
+agent.set_state("input", "What is 2 + 2?")
+result = agent.run()`} />
+      </Section>
+
+      <Section id="async-execution" title="Async Execution">
+        <p style={{ color: '#8b949e', marginBottom: 16 }}>
+          Every agent run has an async counterpart (since 0.3.3). These are native awaitables driven by the
+          Rust runtime bridged to your asyncio loop — no worker-thread bounce — so independent agents can run
+          concurrently under <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>asyncio.gather</code>.
+          Use <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>arun</code> / <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>arun_with_thread</code> for
+          config-driven agents, and <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>arun_with_input</code> for agents built with <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>Agent.create(...)</code>.
+        </p>
+        <CodeBlock
+          rust={`// Rust agents are already async — just .await them:
+let mut agent = from_config_path("agent.yaml")?;
+agent.state.set("input", serde_json::json!("Summarize the news."));
+let result = agent.run().await?;
+// or: agent.run_with_thread("thread-1").await?;`}
+          python={`import asyncio
+from flowgentra_ai.agent import Agent
+
+agent = Agent.from_config_path("agent.yaml")
+
+async def main():
+    agent.set_state("input", "Summarize the news.")
+    result = await agent.arun()                    # config agent
+    # await agent.arun_with_thread("session-1")    # multi-turn, checkpointed
+
+    # Run several agents concurrently:
+    a = Agent.from_config_path("agent.yaml"); a.set_state("input", "task A")
+    b = Agent.from_config_path("agent.yaml"); b.set_state("input", "task B")
+    ra, rb = await asyncio.gather(a.arun(), b.arun())
+
+asyncio.run(main())`}
+        />
       </Section>
 
       <Section id="memory-aware" title="MemoryAwareAgent">
